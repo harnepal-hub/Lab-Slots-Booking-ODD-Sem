@@ -114,10 +114,21 @@ function setupLiveListener() {
     }
 }
 
-// Helper to normalize Roman numeral sem key
+// ULTRA-ROBUST SEMESTER NORMALIZER
 function getCleanSemKey(semVal) {
     if (!semVal) return "";
-    return semVal.replace("Sem ", "").trim();
+    // Robust regex to extract Roman numerals or clean out "Semester", "Sem", spaces
+    const cleaned = semVal.replace(/Semester|Sem/gi, "").trim();
+    if (["I", "III", "V", "VII", "IX"].includes(cleaned)) {
+        return cleaned;
+    }
+    // Fallback search inside string
+    if (semVal.includes("IX")) return "IX";
+    if (semVal.includes("VII")) return "VII";
+    if (semVal.includes("III")) return "III";
+    if (semVal.includes("V")) return "V";
+    if (semVal.includes("I")) return "I";
+    return "";
 }
 
 window.switchTab = function(tabId) {
@@ -427,12 +438,32 @@ window.exportToCSV = function() {
     document.body.removeChild(link);
 };
 
-// Auto Initialization
+// Auto Initialization & Event Binding
 document.addEventListener("DOMContentLoaded", () => {
     const todayISO = "2026-08-11";
     
     document.getElementById("filterDate").value = todayISO;
     document.getElementById("bookingDate").value = todayISO;
+
+    // Attach explicit JS event listeners to guarantee Chrome Desktop execution
+    const semSelect = document.getElementById("semesterSelect");
+    const labSelect = document.getElementById("labSelect");
+    const dateInput = document.getElementById("bookingDate");
+    const filterDateInput = document.getElementById("filterDate");
+
+    semSelect.addEventListener("change", window.handleSemesterChange);
+    semSelect.addEventListener("input", window.handleSemesterChange);
+    
+    labSelect.addEventListener("change", window.checkSlotAvailability);
+    dateInput.addEventListener("change", window.checkSlotAvailability);
+    dateInput.addEventListener("input", window.checkSlotAvailability);
+    
+    filterDateInput.addEventListener("change", window.renderScheduleTable);
+
+    document.getElementById("calendarGridMonth").addEventListener("change", window.renderCalendarGrid);
+    document.getElementById("calendarGridLab").addEventListener("change", window.renderCalendarGrid);
+    document.getElementById("matrixMonth").addEventListener("change", window.generateMonthlyMatrix);
+    document.getElementById("exportCsvBtn").addEventListener("click", window.exportToCSV);
 
     document.getElementById("bookingForm").onsubmit = function(e) {
         e.preventDefault();
