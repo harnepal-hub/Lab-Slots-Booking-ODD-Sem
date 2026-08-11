@@ -18,7 +18,7 @@ body {
     background-color: #006654 !important;
     color: #ffffff !important;
     border-color: #004d3f !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 102, 84, 0.25);
+    box-shadow: 0 4px 6px -1px rgba(0, 102, 84, 0.3);
 }
 
 tbody tr:hover {
