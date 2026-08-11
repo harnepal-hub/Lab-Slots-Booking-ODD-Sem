@@ -114,7 +114,12 @@ function setupLiveListener() {
     }
 }
 
-// Tab Switching System
+// Helper to normalize Roman numeral sem key
+function getCleanSemKey(semVal) {
+    if (!semVal) return "";
+    return semVal.replace("Sem ", "").trim();
+}
+
 window.switchTab = function(tabId) {
     document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
     document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
@@ -130,12 +135,12 @@ window.switchTab = function(tabId) {
     if (tabId === 'dailyTab') window.renderScheduleTable();
 };
 
-// Handle Semester Change (Toggle Section A/B for Sem I, III, V)
 window.handleSemesterChange = function() {
-    const sem = document.getElementById("semesterSelect").value;
+    const rawSem = document.getElementById("semesterSelect").value;
+    const semKey = getCleanSemKey(rawSem);
     const secContainer = document.getElementById("sectionContainer");
 
-    if (["I", "III", "V"].includes(sem)) {
+    if (["I", "III", "V"].includes(semKey)) {
         secContainer.classList.remove("hidden");
     } else {
         secContainer.classList.add("hidden");
@@ -146,12 +151,13 @@ window.handleSemesterChange = function() {
 };
 
 window.populateCourses = function() {
-    const sem = document.getElementById("semesterSelect").value;
+    const rawSem = document.getElementById("semesterSelect").value;
+    const semKey = getCleanSemKey(rawSem);
     const courseSelect = document.getElementById("courseSelect");
     courseSelect.innerHTML = '<option value="">Select Course</option>';
 
-    if (courseData[sem]) {
-        courseData[sem].forEach(c => {
+    if (courseData[semKey]) {
+        courseData[semKey].forEach(c => {
             const opt = document.createElement("option");
             opt.value = `${c.code}: ${c.name}`;
             opt.textContent = `${c.code} - ${c.name}`;
@@ -243,7 +249,6 @@ window.renderScheduleTable = function() {
     });
 };
 
-// --- GOOGLE CALENDAR STYLE 7-COLUMN MONTH GRID ---
 window.renderCalendarGrid = function() {
     const monthVal = document.getElementById("calendarGridMonth").value;
     const labVal = document.getElementById("calendarGridLab").value;
@@ -438,14 +443,15 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const sem = document.getElementById("semesterSelect").value;
-        const sectionVal = ["I", "III", "V"].includes(sem) ? document.getElementById("sectionSelect").value : null;
+        const rawSem = document.getElementById("semesterSelect").value;
+        const semKey = getCleanSemKey(rawSem);
+        const sectionVal = ["I", "III", "V"].includes(semKey) ? document.getElementById("sectionSelect").value : null;
 
         const newBooking = {
             userName: document.getElementById("userName").value.trim(),
             role: document.getElementById("userRole").value,
             userId: document.getElementById("userId").value.trim(),
-            semester: sem,
+            semester: semKey,
             section: sectionVal,
             course: document.getElementById("courseSelect").value,
             lab: document.getElementById("labSelect").value,
