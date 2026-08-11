@@ -97,7 +97,6 @@ try {
     console.warn("Firebase fallback active.", e);
 }
 
-// Subscribe to Live Realtime Database Updates Across All Devices
 function setupLiveListener() {
     if (db) {
         db.ref("bookings").on("value", (snapshot) => {
@@ -107,6 +106,7 @@ function setupLiveListener() {
             });
             window.checkSlotAvailability();
             window.renderScheduleTable();
+            window.renderCalendarGrid();
             window.generateMonthlyMatrix();
         });
     } else {
@@ -114,7 +114,14 @@ function setupLiveListener() {
     }
 }
 
-// Global functions for inline HTML triggers
+window.switchTab = function(tabId) {
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+    
+    document.getElementById(tabId).classList.remove("hidden");
+    document.getElementById(`tab-${tabId}`).classList.add("active");
+};
+
 window.populateCourses = function() {
     const sem = document.getElementById("semesterSelect").value;
     const courseSelect = document.getElementById("courseSelect");
@@ -212,61 +219,148 @@ window.renderScheduleTable = function() {
     });
 };
 
+// --- GOOGLE CALENDAR STYLE 7-COLUMN MONTH GRID ---
+window.renderCalendarGrid = function() {
+    const monthVal = document.getElementById("calendarGridMonth").value;
+    const labVal = document.getElementById("calendarGridLab").value;
+    const gridBody = document.getElementById("calendarGridBody");
+    gridBody.innerHTML = "";
+
+    if (!monthVal) return;
+
+    const [year, month] = monthVal.split("-").map(Number);
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    
+    const startDayIndex = firstDay.getDay();
+    const totalDays = lastDay.getDate();
+
+    const todayISO = "2026-08-11";
+
+    for (let i = 0; i < startDayIndex; i++) {
+        const padCell = document.createElement("div");
+        padCell.className = "cal-day-cell other-month p-2 border-b border-r border-slate-100";
+        gridBody.appendChild(padCell);
+    }
+
+    for (let d = 1; d <= totalDays; d++) {
+        const dayStr = String(d).padStart(2, "0");
+        const dateISO = `${year}-${String(month).padStart(2, "0")}-${dayStr}`;
+        const isToday = (dateISO === todayISO);
+
+        const dayCell = document.createElement("div");
+        dayCell.className = `cal-day-cell p-2 border-b border-r border-slate-100 flex flex-col justify-between ${isToday ? 'bg-emerald-50/40' : ''}`;
+
+        const dayHeader = document.createElement("div");
+        dayHeader.className = "flex justify-between items-center mb-1";
+        
+        const dateNum = document.createElement("span");
+        if (isToday) {
+            dateNum.className = "w-5 h-5 bg-gitam-teal text-white rounded-full flex items-center justify-center font-bold text-[11px]";
+        } else {
+            dateNum.className = "font-bold text-slate-700 text-xs";
+        }
+        dateNum.innerText = d;
+
+        dayHeader.appendChild(dateNum);
+        dayCell.appendChild(dayHeader);
+
+        const dayBookings = liveBookingsCache.filter(b => {
+            const matchesDate = b.date === dateISO;
+            const matchesLab = (labVal === "ALL") || (b.lab === labVal);
+            return matchesDate && matchesLab;
+        });
+
+        const eventsContainer = document.createElement("div");
+        eventsContainer.className = "space-y-1 flex-grow overflow-y-auto max-h-[90px]";
+
+        if (dayBookings.length > 0) {
+            dayBookings.sort((a,b) => a.slot.localeCompare(b.slot));
+
+            dayBookings.forEach(b => {
+                const badge = document.createElement("div");
+                badge.className = "bg-emerald-100/80 border border-emerald-300 text-gitam-teal text-[10px] p-1 rounded font-semibold truncate";
+                
+                const shortTime = b.slot.startsWith("08") ? "8am" : 
+                                 b.slot.startsWith("10") ? "10am" : 
+                                 b.slot.startsWith("01") ? "1pm" : "3pm";
+
+                badge.innerHTML = `<span>${shortTime}</span> <span class="font-bold">田 ${b.lab}</span>`;
+                badge.title = `${b.lab} | ${b.course} | ${b.userName} (${b.role})`;
+                eventsContainer.appendChild(badge);
+            });
+        }
+
+        dayCell.appendChild(eventsContainer);
+        gridBody.appendChild(dayCell);
+    }
+};
+
 window.generateMonthlyMatrix = function() {
     const selectedMonth = document.getElementById("matrixMonth").value;
-    const selectedLab = document.getElementById("matrixLab").value;
     const tbody = document.getElementById("matrixTableBody");
     tbody.innerHTML = "";
 
     if (!selectedMonth) return;
 
-    const monthBookings = liveBookingsCache.filter(b => {
-        const matchesMonth = b.date.startsWith(selectedMonth);
-        const matchesLab = (selectedLab === "ALL") || (b.lab === selectedLab);
-        return matchesMonth && matchesLab;
-    });
+    const monthBookings = liveBookingsCache.filter(b => b.date.startsWith(selectedMonth));
 
     if (monthBookings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">No bookings recorded for ${selectedMonth} (${selectedLab}).</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No bookings recorded for ${selectedMonth}.</td></tr>`;
         return;
     }
 
-    const grouped = {};
+    const groupedByDate = {};
     monthBookings.forEach(b => {
-        const key = `${b.date}__${b.lab}`;
-        if (!grouped[key]) {
-            grouped[key] = { date: b.date, lab: b.lab, slots: {} };
+        if (!groupedByDate[b.date]) {
+            groupedByDate[b.date] = {
+                "08:00 AM - 10:00 AM": [],
+                "10:00 AM - 12:00 PM": [],
+                "01:00 PM - 03:00 PM": [],
+                "03:00 PM - 05:00 PM": []
+            };
         }
-        grouped[key].slots[b.slot] = b;
+        if (groupedByDate[b.date][b.slot]) {
+            groupedByDate[b.date][b.slot].push(b);
+        }
     });
 
-    Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date)).forEach(row => {
+    Object.keys(groupedByDate).sort().forEach(date => {
         const tr = document.createElement("tr");
-        tr.className = "hover:bg-slate-50";
+        tr.className = "hover:bg-slate-50 border-b";
 
-        const slot1 = row.slots["08:00 AM - 10:00 AM"] ? formatSlotCell(row.slots["08:00 AM - 10:00 AM"]) : '<span class="text-slate-300">Free</span>';
-        const slot2 = row.slots["10:00 AM - 12:00 PM"] ? formatSlotCell(row.slots["10:00 AM - 12:00 PM"]) : '<span class="text-slate-300">Free</span>';
-        const slot3 = row.slots["01:00 PM - 03:00 PM"] ? formatSlotCell(row.slots["01:00 PM - 03:00 PM"]) : '<span class="text-slate-300">Free</span>';
-        const slot4 = row.slots["03:00 PM - 05:00 PM"] ? formatSlotCell(row.slots["03:00 PM - 05:00 PM"]) : '<span class="text-slate-300">Free</span>';
+        const slot1 = renderConsolidatedSlotCell(groupedByDate[date]["08:00 AM - 10:00 AM"]);
+        const slot2 = renderConsolidatedSlotCell(groupedByDate[date]["10:00 AM - 12:00 PM"]);
+        const slot3 = renderConsolidatedSlotCell(groupedByDate[date]["01:00 PM - 03:00 PM"]);
+        const slot4 = renderConsolidatedSlotCell(groupedByDate[date]["03:00 PM - 05:00 PM"]);
 
         tr.innerHTML = `
-            <td class="p-2 border font-bold text-slate-700 whitespace-nowrap">${row.date}</td>
-            <td class="p-2 border font-semibold text-gitam-teal whitespace-nowrap">${row.lab}</td>
-            <td class="p-2 border">${slot1}</td>
-            <td class="p-2 border">${slot2}</td>
+            <td class="p-3 border font-bold text-slate-700 whitespace-nowrap bg-slate-50/50">${date}</td>
+            <td class="p-2 border font-medium">${slot1}</td>
+            <td class="p-2 border font-medium">${slot2}</td>
             <td class="p-2 border bg-slate-100 text-center text-[10px] text-slate-400 font-semibold">LUNCH</td>
-            <td class="p-2 border">${slot3}</td>
-            <td class="p-2 border">${slot4}</td>
+            <td class="p-2 border font-medium">${slot3}</td>
+            <td class="p-2 border font-medium">${slot4}</td>
         `;
         tbody.appendChild(tr);
     });
 };
 
-function formatSlotCell(b) {
-    return `<div class="bg-emerald-50 border border-emerald-200 p-1 rounded">
-        <div class="font-bold text-gitam-teal">${b.course.split(':')[0]}</div>
-        <div class="text-[10px] text-slate-600">${b.userName} (${b.role})</div>
-    </div>`;
+function renderConsolidatedSlotCell(bookings) {
+    if (!bookings || bookings.length === 0) {
+        return '<span class="text-slate-300 text-[11px] font-normal italic">Free</span>';
+    }
+
+    return bookings.map(b => `
+        <div class="mb-1.5 p-1.5 bg-emerald-50 border border-emerald-200 rounded text-[11px] shadow-2xs">
+            <div class="font-bold text-gitam-teal flex items-center justify-between">
+                <span>🏷️ ${b.lab}</span>
+                <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">Sem ${b.semester}</span>
+            </div>
+            <div class="text-[10px] font-semibold text-slate-700 mt-0.5 truncate">${b.course}</div>
+            <div class="text-[9px] text-slate-500">${b.userName} (${b.role})</div>
+        </div>
+    `).join("");
 }
 
 window.exportToCSV = function() {
@@ -352,6 +446,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         window.checkSlotAvailability();
         window.renderScheduleTable();
+        window.renderCalendarGrid();
         window.generateMonthlyMatrix();
     };
 
