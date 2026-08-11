@@ -1,4 +1,4 @@
-// --- 1. ODD SEMESTER CURRICULUM DATA ---
+// --- ODD SEMESTER CURRICULUM DATA ---
 const courseData = {
     "I": [
         { code: "AAR111", name: "Introduction to Art and Architecture" },
@@ -71,7 +71,6 @@ const standardSlots = [
     "03:00 PM - 05:00 PM"
 ];
 
-// Helper to access LocalStorage safely
 function getLocalBookings() {
     return JSON.parse(localStorage.getItem("gitam_lab_bookings") || "[]");
 }
@@ -82,8 +81,8 @@ function saveLocalBooking(booking) {
     localStorage.setItem("gitam_lab_bookings", JSON.stringify(current));
 }
 
-// Populate Courses dropdown
-function populateCourses() {
+// Global functions for inline HTML event triggers
+window.populateCourses = function() {
     const sem = document.getElementById("semesterSelect").value;
     const courseSelect = document.getElementById("courseSelect");
     courseSelect.innerHTML = '<option value="">Select Course</option>';
@@ -98,10 +97,9 @@ function populateCourses() {
     } else {
         courseSelect.innerHTML = '<option value="">Select Semester First</option>';
     }
-}
+};
 
-// Slot Availability Checker
-function checkSlotAvailability() {
+window.checkSlotAvailability = function() {
     const lab = document.getElementById("labSelect").value;
     const date = document.getElementById("bookingDate").value;
     const container = document.getElementById("slotsContainer");
@@ -146,10 +144,9 @@ function checkSlotAvailability() {
         }
         container.appendChild(btn);
     });
-}
+};
 
-// Render Table Overview
-function renderScheduleTable() {
+window.renderScheduleTable = function() {
     const date = document.getElementById("filterDate").value;
     const tbody = document.getElementById("scheduleTableBody");
     tbody.innerHTML = "";
@@ -182,10 +179,9 @@ function renderScheduleTable() {
         `;
         tbody.appendChild(row);
     });
-}
+};
 
-// Monthly Timetable Matrix Generator
-function generateMonthlyMatrix() {
+window.generateMonthlyMatrix = function() {
     const selectedMonth = document.getElementById("matrixMonth").value;
     const selectedLab = document.getElementById("matrixLab").value;
     const tbody = document.getElementById("matrixTableBody");
@@ -234,7 +230,7 @@ function generateMonthlyMatrix() {
         `;
         tbody.appendChild(tr);
     });
-}
+};
 
 function formatSlotCell(b) {
     return `<div class="bg-emerald-50 border border-emerald-200 p-1 rounded">
@@ -243,8 +239,7 @@ function formatSlotCell(b) {
     </div>`;
 }
 
-// Export to CSV
-function exportToCSV() {
+window.exportToCSV = function() {
     const allBookings = getLocalBookings();
     if (allBookings.length === 0) {
         alert("No booking data available to export.");
@@ -275,32 +270,15 @@ function exportToCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-}
+};
 
-// Attach Event Listeners on Load
+// Auto Initialization
 document.addEventListener("DOMContentLoaded", () => {
-    // Set dynamic default date to TODAY (2026-08-11)
     const todayISO = "2026-08-11";
     
-    const filterDateInput = document.getElementById("filterDate");
-    filterDateInput.value = todayISO;
+    document.getElementById("filterDate").value = todayISO;
+    document.getElementById("bookingDate").value = todayISO;
 
-    const bookingDateInput = document.getElementById("bookingDate");
-    bookingDateInput.value = todayISO;
-
-    // Attach listeners
-    document.getElementById("semesterSelect").addEventListener("change", populateCourses);
-    document.getElementById("labSelect").addEventListener("change", checkSlotAvailability);
-    bookingDateInput.addEventListener("change", checkSlotAvailability);
-    bookingDateInput.addEventListener("input", checkSlotAvailability);
-    
-    filterDateInput.addEventListener("change", renderScheduleTable);
-    
-    document.getElementById("matrixMonth").addEventListener("change", generateMonthlyMatrix);
-    document.getElementById("matrixLab").addEventListener("change", generateMonthlyMatrix);
-    document.getElementById("exportCsvBtn").addEventListener("click", exportToCSV);
-
-    // Form Submit Handler
     document.getElementById("bookingForm").onsubmit = function(e) {
         e.preventDefault();
 
@@ -329,18 +307,16 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("selectedSlot").value = "";
         document.getElementById("courseSelect").innerHTML = '<option value="">Select Semester First</option>';
         
-        // Reset defaults post-submit
-        bookingDateInput.value = todayISO;
-        filterDateInput.value = todayISO;
+        document.getElementById("bookingDate").value = todayISO;
+        document.getElementById("filterDate").value = todayISO;
 
-        checkSlotAvailability();
-        renderScheduleTable();
-        generateMonthlyMatrix();
+        window.checkSlotAvailability();
+        window.renderScheduleTable();
+        window.generateMonthlyMatrix();
     };
 
-    // Initial render
-    populateCourses();
-    checkSlotAvailability();
-    renderScheduleTable();
-    generateMonthlyMatrix();
+    window.populateCourses();
+    window.checkSlotAvailability();
+    window.renderScheduleTable();
+    window.generateMonthlyMatrix();
 });
