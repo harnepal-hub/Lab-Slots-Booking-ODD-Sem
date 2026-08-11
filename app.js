@@ -114,12 +114,21 @@ function setupLiveListener() {
     }
 }
 
+// Tab Switching System
 window.switchTab = function(tabId) {
     document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
     document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
     
-    document.getElementById(tabId).classList.remove("hidden");
-    document.getElementById(`tab-${tabId}`).classList.add("active");
+    const targetContent = document.getElementById(tabId);
+    const targetTabBtn = document.getElementById(`tab-${tabId}`);
+
+    if (targetContent) targetContent.classList.remove("hidden");
+    if (targetTabBtn) targetTabBtn.classList.add("active");
+
+    // Trigger specific render functions on view switch
+    if (tabId === 'calendarGridTab') window.renderCalendarGrid();
+    if (tabId === 'matrixTab') window.generateMonthlyMatrix();
+    if (tabId === 'dailyTab') window.renderScheduleTable();
 };
 
 window.populateCourses = function() {
