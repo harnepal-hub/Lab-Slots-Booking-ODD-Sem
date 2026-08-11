@@ -44,8 +44,11 @@
     <header class="bg-gitam-teal text-white shadow-md border-b-4 border-gitam-tealDark">
         <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div class="flex items-center gap-4">
-                <div class="bg-white p-2 rounded-md shadow-sm border border-emerald-100 flex items-center justify-center">
-                    <img src="https://www.gitam.edu/themes/custom/gitam/logo.svg" alt="GITAM Deemed to be University" class="h-10 md:h-12 w-auto object-contain" onerror="this.onerror=null; this.src='https://www.gitam.edu/assets/images/gitam-logo.png';">
+                <!-- Vector GITAM Logo Shield -->
+                <div class="bg-white p-2 rounded-md shadow-sm border border-emerald-100 flex items-center justify-center w-12 h-12 flex-shrink-0">
+                    <svg viewBox="0 0 100 100" class="w-full h-full fill-current text-gitam-teal">
+                        <path d="M50 5 L90 20 V50 C90 75 50 95 50 95 C50 95 10 75 10 50 V20 L50 5 Z M50 18 L22 28 V48 C22 68 50 83 50 83 C50 83 78 68 78 48 V28 L50 18 Z M50 32 A12 12 0 1 1 50 56 A12 12 0 1 1 50 32 Z"/>
+                    </svg>
                 </div>
                 <div>
                     <h1 class="text-xl md:text-2xl font-bold tracking-wide uppercase">GITAM Deemed to be University</h1>
@@ -96,7 +99,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Semester</label>
-                        <select id="semesterSelect" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm bg-white transition">
+                        <select id="semesterSelect" required onchange="populateCourses()" class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm bg-white transition">
                             <option value="">Select</option>
                             <option value="I">Semester I</option>
                             <option value="III">Semester III</option>
@@ -107,7 +110,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Lab Facility</label>
-                        <select id="labSelect" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm bg-white transition">
+                        <select id="labSelect" required onchange="checkSlotAvailability()" class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm bg-white transition">
                             <option value="">Select Lab</option>
                             <option value="Maker Space">Maker Space</option>
                             <option value="Computer Lab">Computer Lab</option>
@@ -130,7 +133,7 @@
                 <!-- Date Picker -->
                 <div>
                     <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Booking Date</label>
-                    <input type="date" id="bookingDate" min="2026-07-01" max="2026-11-30" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm transition">
+                    <input type="date" id="bookingDate" min="2026-07-01" max="2026-11-30" required onchange="checkSlotAvailability()" oninput="checkSlotAvailability()" class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm transition">
                 </div>
 
                 <!-- 2-Hour Slot Grid -->
@@ -155,7 +158,7 @@
                 <h2 class="text-lg font-bold text-gitam-teal uppercase tracking-wide">Lab Schedule Overview</h2>
                 <div class="flex items-center gap-2">
                     <label for="filterDate" class="text-xs font-bold text-slate-700 uppercase">View Date:</label>
-                    <input type="date" id="filterDate" min="2026-07-01" max="2026-11-30" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none focus:ring-1 focus:ring-gitam-teal">
+                    <input type="date" id="filterDate" min="2026-07-01" max="2026-11-30" onchange="renderScheduleTable()" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none focus:ring-1 focus:ring-gitam-teal">
                 </div>
             </div>
 
@@ -188,11 +191,11 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-slate-600">Filter Month</label>
-                        <input type="month" id="matrixMonth" min="2026-07" max="2026-11" value="2026-08" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none">
+                        <input type="month" id="matrixMonth" min="2026-07" max="2026-11" value="2026-08" onchange="generateMonthlyMatrix()" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none">
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold uppercase text-slate-600">Filter Lab</label>
-                        <select id="matrixLab" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none bg-white">
+                        <select id="matrixLab" onchange="generateMonthlyMatrix()" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none bg-white">
                             <option value="ALL">All Labs</option>
                             <option value="Maker Space">Maker Space</option>
                             <option value="Computer Lab">Computer Lab</option>
@@ -202,209 +205,7 @@
                             <option value="Art Court">Art Court</option>
                         </select>
                     </div>
-                    <button id="exportCsvBtn" type="button" class="mt-4 md:mt-0 bg-gitam-teal hover:bg-gitam-tealDark text-white px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow">
-                        <span>📥 Export CSV / Excel</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="bg-gitam-teal text-white uppercase text-[10px] tracking-wider">
-                            <th class="p-2.5 border border-emerald-900">Date</th>
-                            <th class="p-2.5 border border-emerald-900">Lab Facility</th>
-                            <th class="p-2.5 border border-emerald-900">08:00 AM - 10:00 AM</th>
-                            <th class="p-2.5 border border-emerald-900">10:00 AM - 12:00 PM</th>
-                            <th class="p-2.5 border border-emerald-900 bg-emerald-900 text-slate-300 text-center">12-1 PM</th>
-                            <th class="p-2.5 border border-emerald-900">01:00 PM - 03:00 PM</th>
-                            <th class="p-2.5 border border-emerald-900">03:00 PM - 05:00 PM</th>
-                        </tr>
-                    </thead>
-                    <tbody id="matrixTableBody" class="divide-y divide-slate-200">
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-    </main>
-
-    <footer class="bg-gitam-dark text-slate-400 py-4 text-center text-xs border-t border-slate-800 mt-8">
-        <p>&copy; 2026 GITAM (Deemed to be University) — School of Architecture. All rights reserved.</p>
-    </footer>
-
-    <script src="app.js"></script>
-</body>
-</html>    </script>
-    
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="bg-gitam-bg text-gitam-dark font-sans min-h-screen flex flex-col justify-between">
-
-    <!-- GITAM Official Header Banner -->
-    <header class="bg-gitam-teal text-white shadow-md border-b-4 border-gitam-tealDark">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div class="flex items-center gap-4">
-                <!-- Official GITAM Logo -->
-                <div class="bg-white p-2 rounded-md shadow-sm border border-emerald-100 flex items-center justify-center">
-                    <img src="https://www.gitam.edu/themes/custom/gitam/logo.svg" alt="GITAM Deemed to be University" class="h-10 md:h-12 w-auto object-contain" onerror="this.src='https://www.gitam.edu/assets/images/gitam-logo.png'">
-                </div>
-                <div>
-                    <h1 class="text-xl md:text-2xl font-bold tracking-wide uppercase">GITAM Deemed to be University</h1>
-                    <p class="text-gitam-tealLight text-xs md:text-sm font-medium">School of Architecture — Lab Booking Portal (Odd Semester 2026)</p>
-                </div>
-            </div>
-            <div class="text-xs text-gitam-tealLight border-t md:border-t-0 md:border-l border-emerald-800 pt-2 md:pt-0 md:pl-4">
-                <p class="font-semibold text-white">Lab Hours: 08:00 AM – 05:00 PM</p>
-                <p>Break: 12:00 PM – 01:00 PM</p>
-                <p>Cycle: Jul 1, 2026 – Nov 30, 2026</p>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 w-full flex-grow">
-        
-        <!-- BOOKING FORM SECTION -->
-        <section class="lg:col-span-5 bg-gitam-card p-6 rounded-xl shadow-sm border border-gitam-border h-fit">
-            <div class="flex items-center justify-between border-b border-gitam-border pb-3 mb-5">
-                <h2 class="text-lg font-bold text-gitam-teal uppercase tracking-wide">New Slot Request</h2>
-                <span class="text-[11px] font-semibold bg-gitam-tealLight text-gitam-teal px-2 py-0.5 rounded border border-emerald-200">Odd Semesters (I - IX)</span>
-            </div>
-            
-            <form id="bookingForm" class="space-y-4">
-                <!-- User Name -->
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Full Name</label>
-                    <input type="text" id="userName" placeholder="e.g. Harish Arnepalli" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm transition">
-                </div>
-
-                <!-- Role & ID -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Role</label>
-                        <select id="userRole" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm bg-white transition">
-                            <option value="">Select</option>
-                            <option value="Student">Student</option>
-                            <option value="Faculty">Faculty</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Roll / Employee ID</label>
-                        <input type="text" id="userId" placeholder="ID Number" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm transition">
-                    </div>
-                </div>
-
-                <!-- Semester & Lab -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Semester</label>
-                        <select id="semesterSelect" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm bg-white transition">
-                            <option value="">Select</option>
-                            <option value="I">Sem I</option>
-                            <option value="III">Sem III</option>
-                            <option value="V">Sem V</option>
-                            <option value="VII">Sem VII</option>
-                            <option value="IX">Sem IX</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Lab Facility</label>
-                        <select id="labSelect" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm bg-white transition">
-                            <option value="">Select Lab</option>
-                            <option value="Maker Space">Maker Space</option>
-                            <option value="Computer Lab">Computer Lab</option>
-                            <option value="VR Lab">VR Lab</option>
-                            <option value="Climo Lab">Climo Lab</option>
-                            <option value="3D Printer Lab">3D Printer Lab</option>
-                            <option value="Art Court">Art Court</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Course Selection -->
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Course Code & Name</label>
-                    <select id="courseSelect" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm bg-white transition">
-                        <option value="">Select Semester First</option>
-                    </select>
-                </div>
-
-                <!-- Date Picker -->
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Booking Date</label>
-                    <input type="date" id="bookingDate" min="2026-07-01" max="2026-11-30" required class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm transition">
-                </div>
-
-                <!-- 2-Hour Slot Grid -->
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Available 2-Hour Slots</label>
-                    <div id="slotsContainer" class="grid grid-cols-2 gap-2 mt-2 min-h-[80px]">
-                        <p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2">⚠️ Please select both a <strong>Lab Facility</strong> and a <strong>Booking Date</strong> above to view slots.</p>
-                    </div>
-                </div>
-
-                <input type="hidden" id="selectedSlot" required>
-
-                <button type="submit" id="submitBtn" class="w-full bg-gitam-teal hover:bg-gitam-tealDark text-white font-bold py-3 rounded-md shadow transition duration-200 text-sm uppercase tracking-wider">
-                    Confirm & Book Slot
-                </button>
-            </form>
-        </section>
-
-        <!-- TIMETABLE OVERVIEW SECTION -->
-        <section class="lg:col-span-7 bg-gitam-card p-6 rounded-xl shadow-sm border border-gitam-border flex flex-col">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-gitam-border pb-3">
-                <h2 class="text-lg font-bold text-gitam-teal uppercase tracking-wide">Lab Schedule Overview</h2>
-                <div class="flex items-center gap-2">
-                    <label for="filterDate" class="text-xs font-bold text-slate-700 uppercase">View Date:</label>
-                    <input type="date" id="filterDate" min="2026-07-01" max="2026-11-30" value="2026-07-01" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none focus:ring-1 focus:ring-gitam-teal">
-                </div>
-            </div>
-
-            <div class="overflow-x-auto flex-grow">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-100 text-[11px] text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
-                            <th class="p-3 border-b">Time Slot</th>
-                            <th class="p-3 border-b">Lab</th>
-                            <th class="p-3 border-b">Course / User Details</th>
-                            <th class="p-3 border-b text-center">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="scheduleTableBody" class="text-xs divide-y divide-slate-100">
-                        <tr>
-                            <td colspan="4" class="p-6 text-center text-slate-400">Loading schedule data...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- MONTHLY TIMETABLE MATRIX SECTION -->
-        <section class="lg:col-span-12 bg-gitam-card p-6 rounded-xl shadow-sm border border-gitam-border">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gitam-border pb-4 mb-4">
-                <div>
-                    <h2 class="text-lg font-bold text-gitam-teal uppercase tracking-wide">Monthly Lab Timetable Matrix</h2>
-                    <p class="text-xs text-slate-500">View overall lab utilization across all slots for any selected month.</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase text-slate-600">Filter Month</label>
-                        <input type="month" id="matrixMonth" min="2026-07" max="2026-11" value="2026-07" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase text-slate-600">Filter Lab</label>
-                        <select id="matrixLab" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none bg-white">
-                            <option value="ALL">All Labs</option>
-                            <option value="Maker Space">Maker Space</option>
-                            <option value="Computer Lab">Computer Lab</option>
-                            <option value="VR Lab">VR Lab</option>
-                            <option value="Climo Lab">Climo Lab</option>
-                            <option value="3D Printer Lab">3D Printer Lab</option>
-                            <option value="Art Court">Art Court</option>
-                        </select>
-                    </div>
-                    <button id="exportCsvBtn" type="button" class="mt-4 md:mt-0 bg-gitam-teal hover:bg-gitam-tealDark text-white px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow">
+                    <button id="exportCsvBtn" type="button" onclick="exportToCSV()" class="mt-4 md:mt-0 bg-gitam-teal hover:bg-gitam-tealDark text-white px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow">
                         <span>📥 Export CSV / Excel</span>
                     </button>
                 </div>
