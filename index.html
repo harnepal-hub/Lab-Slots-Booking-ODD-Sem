@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GITAM School of Architecture - Lab Slot Booking Portal</title>
     
-    <!-- Google Fonts: Open Sans -->
+    <!-- Google Fonts: Open Sans (Official GITAM Typography) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
@@ -37,6 +37,10 @@
     </script>
     
     <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase JS SDK (Compat Mode for Live Cross-Device Sync) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
 <body class="bg-gitam-bg text-gitam-dark font-sans min-h-screen flex flex-col justify-between">
 
@@ -44,7 +48,7 @@
     <header class="bg-gitam-teal text-white shadow-md border-b-4 border-gitam-tealDark">
         <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div class="flex items-center gap-4">
-                <!-- Vector GITAM Logo Shield -->
+                <!-- GITAM Logo Shield Graphic -->
                 <div class="bg-white p-2 rounded-md shadow-sm border border-emerald-100 flex items-center justify-center w-12 h-12 flex-shrink-0">
                     <svg viewBox="0 0 100 100" class="w-full h-full fill-current text-gitam-teal">
                         <path d="M50 5 L90 20 V50 C90 75 50 95 50 95 C50 95 10 75 10 50 V20 L50 5 Z M50 18 L22 28 V48 C22 68 50 83 50 83 C50 83 78 68 78 48 V28 L50 18 Z M50 32 A12 12 0 1 1 50 56 A12 12 0 1 1 50 32 Z"/>
@@ -55,9 +59,11 @@
                     <p class="text-gitam-tealLight text-xs md:text-sm font-medium">School of Architecture — Lab Booking Portal (Odd Semester 2026)</p>
                 </div>
             </div>
-            <div class="text-xs text-gitam-tealLight border-t md:border-t-0 md:border-l border-emerald-800 pt-2 md:pt-0 md:pl-4">
+            <div class="flex flex-col md:items-end gap-1 text-xs text-gitam-tealLight border-t md:border-t-0 md:border-l border-emerald-800 pt-2 md:pt-0 md:pl-4">
+                <div id="syncStatus" class="inline-flex items-center gap-1.5 bg-emerald-900/80 px-2 py-0.5 rounded text-[11px] text-emerald-200 font-semibold mb-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Live Cloud Sync Active
+                </div>
                 <p class="font-semibold text-white">Lab Hours: 08:00 AM – 05:00 PM</p>
-                <p>Break: 12:00 PM – 01:00 PM</p>
                 <p>Cycle: Jul 1, 2026 – Nov 30, 2026</p>
             </div>
         </div>
@@ -155,7 +161,7 @@
         <!-- TIMETABLE OVERVIEW SECTION -->
         <section class="lg:col-span-7 bg-gitam-card p-6 rounded-xl shadow-sm border border-gitam-border flex flex-col">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-gitam-border pb-3">
-                <h2 class="text-lg font-bold text-gitam-teal uppercase tracking-wide">Lab Schedule Overview</h2>
+                <h2 class="text-lg font-bold text-gitam-teal uppercase tracking-wide">Live Schedule Overview</h2>
                 <div class="flex items-center gap-2">
                     <label for="filterDate" class="text-xs font-bold text-slate-700 uppercase">View Date:</label>
                     <input type="date" id="filterDate" min="2026-07-01" max="2026-11-30" onchange="renderScheduleTable()" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none focus:ring-1 focus:ring-gitam-teal">
@@ -174,7 +180,7 @@
                     </thead>
                     <tbody id="scheduleTableBody" class="text-xs divide-y divide-slate-100">
                         <tr>
-                            <td colspan="4" class="p-6 text-center text-slate-400">Loading schedule data...</td>
+                            <td colspan="4" class="p-6 text-center text-slate-400">Syncing live schedule data...</td>
                         </tr>
                     </tbody>
                 </table>
