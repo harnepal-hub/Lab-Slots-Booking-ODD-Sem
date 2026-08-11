@@ -64,12 +64,21 @@ const courseData = {
     ]
 };
 
+// 1-HOUR SLOTS DEFINITION
 const standardSlots = [
-    "08:00 AM - 10:00 AM",
-    "10:00 AM - 12:00 PM",
-    "01:00 PM - 03:00 PM",
-    "03:00 PM - 05:00 PM"
+    "08:00 AM - 09:00 AM",
+    "09:00 AM - 10:00 AM",
+    "10:00 AM - 11:00 AM",
+    "11:00 AM - 12:00 PM",
+    "12:00 PM - 01:00 PM", // LUNCH (LOCKED)
+    "01:00 PM - 02:00 PM",
+    "02:00 PM - 03:00 PM",
+    "03:00 PM - 04:00 PM",
+    "04:00 PM - 05:00 PM"
 ];
+
+// Array to store multi-selected slots
+let selectedSlotsArray = [];
 
 // --- 2. YOUR FIREBASE PROJECT CONFIGURATION ---
 const firebaseConfig = {
@@ -114,15 +123,10 @@ function setupLiveListener() {
     }
 }
 
-// ULTRA-ROBUST SEMESTER NORMALIZER
 function getCleanSemKey(semVal) {
     if (!semVal) return "";
-    // Robust regex to extract Roman numerals or clean out "Semester", "Sem", spaces
     const cleaned = semVal.replace(/Semester|Sem/gi, "").trim();
-    if (["I", "III", "V", "VII", "IX"].includes(cleaned)) {
-        return cleaned;
-    }
-    // Fallback search inside string
+    if (["I", "III", "V", "VII", "IX"].includes(cleaned)) return cleaned;
     if (semVal.includes("IX")) return "IX";
     if (semVal.includes("VII")) return "VII";
     if (semVal.includes("III")) return "III";
@@ -183,18 +187,18 @@ window.checkSlotAvailability = function() {
     const lab = document.getElementById("labSelect").value;
     const date = document.getElementById("bookingDate").value;
     const container = document.getElementById("slotsContainer");
-    document.getElementById("selectedSlot").value = "";
+    selectedSlotsArray = [];
 
     if (!lab && !date) {
-        container.innerHTML = '<p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2">⚠️ Please select both a <strong>Lab Facility</strong> and a <strong>Booking Date</strong> above to view slots.</p>';
+        container.innerHTML = '<p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2 sm:col-span-4">⚠️ Please select both a <strong>Lab Facility</strong> and a <strong>Booking Date</strong> above to view slots.</p>';
         return;
     }
     if (!lab) {
-        container.innerHTML = '<p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2">⚠️ Please select a <strong>Lab Facility</strong> above.</p>';
+        container.innerHTML = '<p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2 sm:col-span-4">⚠️ Please select a <strong>Lab Facility</strong> above.</p>';
         return;
     }
     if (!date) {
-        container.innerHTML = '<p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2">⚠️ Please pick a <strong>Booking Date</strong> above.</p>';
+        container.innerHTML = '<p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2 sm:col-span-4">⚠️ Please pick a <strong>Booking Date</strong> above.</p>';
         return;
     }
 
@@ -204,21 +208,30 @@ window.checkSlotAvailability = function() {
 
     container.innerHTML = "";
     standardSlots.forEach(slot => {
+        const isLunch = (slot === "12:00 PM - 01:00 PM");
         const isBooked = bookedSlots.includes(slot);
         const btn = document.createElement("button");
         btn.type = "button";
         
-        if (isBooked) {
+        if (isLunch) {
+            btn.className = "slot-btn p-2 text-xs font-bold rounded-md border border-slate-300 bg-slate-100 text-slate-400 w-full text-center cursor-not-allowed";
+            btn.innerHTML = `<span>12-1 PM</span> <span class="text-[9px] block text-slate-400 font-semibold">LUNCH BREAK</span>`;
+            btn.disabled = true;
+        } else if (isBooked) {
             btn.className = "slot-btn disabled p-2 text-xs font-medium rounded-md border w-full text-left flex justify-between items-center";
-            btn.innerHTML = `<span>${slot}</span> <span class="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded border border-red-200 uppercase">Filled</span>`;
+            btn.innerHTML = `<span class="truncate">${slot}</span> <span class="text-[9px] bg-red-100 text-red-700 font-bold px-1 rounded border border-red-200 uppercase">FILLED</span>`;
             btn.disabled = true;
         } else {
-            btn.className = "slot-btn p-2 text-xs font-semibold rounded-md border border-emerald-300 bg-emerald-50/60 text-gitam-teal hover:bg-gitam-teal hover:text-white w-full text-center cursor-pointer";
+            btn.className = "slot-btn p-2 text-xs font-semibold rounded-md border border-emerald-300 bg-emerald-50/60 text-gitam-teal hover:bg-gitam-teal hover:text-white w-full text-center cursor-pointer transition";
             btn.innerText = slot;
             btn.onclick = () => {
-                document.querySelectorAll("#slotsContainer button").forEach(b => b.classList.remove("selected"));
-                btn.classList.add("selected");
-                document.getElementById("selectedSlot").value = slot;
+                if (selectedSlotsArray.includes(slot)) {
+                    selectedSlotsArray = selectedSlotsArray.filter(s => s !== slot);
+                    btn.classList.remove("selected");
+                } else {
+                    selectedSlotsArray.push(slot);
+                    btn.classList.add("selected");
+                }
             };
         }
         container.appendChild(btn);
@@ -321,10 +334,7 @@ window.renderCalendarGrid = function() {
                 const badge = document.createElement("div");
                 badge.className = "bg-emerald-100/80 border border-emerald-300 text-gitam-teal text-[10px] p-1 rounded font-semibold truncate";
                 
-                const shortTime = b.slot.startsWith("08") ? "8am" : 
-                                 b.slot.startsWith("10") ? "10am" : 
-                                 b.slot.startsWith("01") ? "1pm" : "3pm";
-
+                const shortTime = b.slot.split(" ")[0]; // Extract starting hour e.g. "08:00"
                 const secTag = b.section ? `-${b.section}` : '';
                 badge.innerHTML = `<span>${shortTime}</span> <span class="font-bold">田 ${b.lab}</span> <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">S${b.semester}${secTag}</span>`;
                 badge.title = `${b.lab} | ${b.course} | ${b.userName} (${b.role})`;
@@ -347,7 +357,7 @@ window.generateMonthlyMatrix = function() {
     const monthBookings = liveBookingsCache.filter(b => b.date.startsWith(selectedMonth));
 
     if (monthBookings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No bookings recorded for ${selectedMonth}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400">No bookings recorded for ${selectedMonth}.</td></tr>`;
         return;
     }
 
@@ -355,10 +365,14 @@ window.generateMonthlyMatrix = function() {
     monthBookings.forEach(b => {
         if (!groupedByDate[b.date]) {
             groupedByDate[b.date] = {
-                "08:00 AM - 10:00 AM": [],
-                "10:00 AM - 12:00 PM": [],
-                "01:00 PM - 03:00 PM": [],
-                "03:00 PM - 05:00 PM": []
+                "08:00 AM - 09:00 AM": [],
+                "09:00 AM - 10:00 AM": [],
+                "10:00 AM - 11:00 AM": [],
+                "11:00 AM - 12:00 PM": [],
+                "01:00 PM - 02:00 PM": [],
+                "02:00 PM - 03:00 PM": [],
+                "03:00 PM - 04:00 PM": [],
+                "04:00 PM - 05:00 PM": []
             };
         }
         if (groupedByDate[b.date][b.slot]) {
@@ -370,18 +384,26 @@ window.generateMonthlyMatrix = function() {
         const tr = document.createElement("tr");
         tr.className = "hover:bg-slate-50 border-b";
 
-        const slot1 = renderConsolidatedSlotCell(groupedByDate[date]["08:00 AM - 10:00 AM"]);
-        const slot2 = renderConsolidatedSlotCell(groupedByDate[date]["10:00 AM - 12:00 PM"]);
-        const slot3 = renderConsolidatedSlotCell(groupedByDate[date]["01:00 PM - 03:00 PM"]);
-        const slot4 = renderConsolidatedSlotCell(groupedByDate[date]["03:00 PM - 05:00 PM"]);
+        const s1 = renderConsolidatedSlotCell(groupedByDate[date]["08:00 AM - 09:00 AM"]);
+        const s2 = renderConsolidatedSlotCell(groupedByDate[date]["09:00 AM - 10:00 AM"]);
+        const s3 = renderConsolidatedSlotCell(groupedByDate[date]["10:00 AM - 11:00 AM"]);
+        const s4 = renderConsolidatedSlotCell(groupedByDate[date]["11:00 AM - 12:00 PM"]);
+        const s5 = renderConsolidatedSlotCell(groupedByDate[date]["01:00 PM - 02:00 PM"]);
+        const s6 = renderConsolidatedSlotCell(groupedByDate[date]["02:00 PM - 03:00 PM"]);
+        const s7 = renderConsolidatedSlotCell(groupedByDate[date]["03:00 PM - 04:00 PM"]);
+        const s8 = renderConsolidatedSlotCell(groupedByDate[date]["04:00 PM - 05:00 PM"]);
 
         tr.innerHTML = `
-            <td class="p-3 border font-bold text-slate-700 whitespace-nowrap bg-slate-50/50">${date}</td>
-            <td class="p-2 border font-medium">${slot1}</td>
-            <td class="p-2 border font-medium">${slot2}</td>
-            <td class="p-2 border bg-slate-100 text-center text-[10px] text-slate-400 font-semibold">LUNCH</td>
-            <td class="p-2 border font-medium">${slot3}</td>
-            <td class="p-2 border font-medium">${slot4}</td>
+            <td class="p-2 border font-bold text-slate-700 whitespace-nowrap bg-slate-50/50 text-[11px]">${date}</td>
+            <td class="p-1.5 border font-medium text-[10px]">${s1}</td>
+            <td class="p-1.5 border font-medium text-[10px]">${s2}</td>
+            <td class="p-1.5 border font-medium text-[10px]">${s3}</td>
+            <td class="p-1.5 border font-medium text-[10px]">${s4}</td>
+            <td class="p-1.5 border bg-slate-100 text-center text-[9px] text-slate-400 font-semibold">LUNCH</td>
+            <td class="p-1.5 border font-medium text-[10px]">${s5}</td>
+            <td class="p-1.5 border font-medium text-[10px]">${s6}</td>
+            <td class="p-1.5 border font-medium text-[10px]">${s7}</td>
+            <td class="p-1.5 border font-medium text-[10px]">${s8}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -389,18 +411,14 @@ window.generateMonthlyMatrix = function() {
 
 function renderConsolidatedSlotCell(bookings) {
     if (!bookings || bookings.length === 0) {
-        return '<span class="text-slate-300 text-[11px] font-normal italic">Free</span>';
+        return '<span class="text-slate-300 text-[10px] font-normal italic">Free</span>';
     }
 
     return bookings.map(b => {
         const secText = b.section ? ` Sec ${b.section}` : '';
-        return `<div class="mb-1.5 p-1.5 bg-emerald-50 border border-emerald-200 rounded text-[11px] shadow-2xs">
-            <div class="font-bold text-gitam-teal flex items-center justify-between">
-                <span>🏷️ ${b.lab}</span>
-                <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">Sem ${b.semester}${secText}</span>
-            </div>
-            <div class="text-[10px] font-semibold text-slate-700 mt-0.5 truncate">${b.course}</div>
-            <div class="text-[9px] text-slate-500">${b.userName} (${b.role})</div>
+        return `<div class="mb-1 p-1 bg-emerald-50 border border-emerald-200 rounded text-[10px]">
+            <div class="font-bold text-gitam-teal truncate">田 ${b.lab}</div>
+            <div class="text-[9px] text-slate-600 truncate">${b.course.split(':')[0]} (Sem ${b.semester}${secText})</div>
         </div>`;
     }).join("");
 }
@@ -429,7 +447,7 @@ window.exportToCSV = function() {
         csvContent += row + "\n";
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const encodedUri = encodeURI(encodeURI(csvContent));
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", `GITAM_Lab_Timetable_Export_${new Date().toISOString().slice(0,10)}.csv`);
@@ -438,14 +456,13 @@ window.exportToCSV = function() {
     document.body.removeChild(link);
 };
 
-// Auto Initialization & Event Binding
+// Auto Initialization
 document.addEventListener("DOMContentLoaded", () => {
     const todayISO = "2026-08-11";
     
     document.getElementById("filterDate").value = todayISO;
     document.getElementById("bookingDate").value = todayISO;
 
-    // Attach explicit JS event listeners to guarantee Chrome Desktop execution
     const semSelect = document.getElementById("semesterSelect");
     const labSelect = document.getElementById("labSelect");
     const dateInput = document.getElementById("bookingDate");
@@ -468,9 +485,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("bookingForm").onsubmit = function(e) {
         e.preventDefault();
 
-        const slot = document.getElementById("selectedSlot").value;
-        if (!slot) {
-            alert("Please click on one of the available 2-hour slot buttons.");
+        if (selectedSlotsArray.length === 0) {
+            alert("Please click on at least one available 1-hour slot button.");
             return;
         }
 
@@ -478,35 +494,52 @@ document.addEventListener("DOMContentLoaded", () => {
         const semKey = getCleanSemKey(rawSem);
         const sectionVal = ["I", "III", "V"].includes(semKey) ? document.getElementById("sectionSelect").value : null;
 
-        const newBooking = {
-            userName: document.getElementById("userName").value.trim(),
-            role: document.getElementById("userRole").value,
-            userId: document.getElementById("userId").value.trim(),
-            semester: semKey,
-            section: sectionVal,
-            course: document.getElementById("courseSelect").value,
-            lab: document.getElementById("labSelect").value,
-            date: document.getElementById("bookingDate").value,
-            slot: slot,
-            timestamp: Date.now()
-        };
+        const userName = document.getElementById("userName").value.trim();
+        const role = document.getElementById("userRole").value;
+        const userId = document.getElementById("userId").value.trim();
+        const course = document.getElementById("courseSelect").value;
+        const lab = document.getElementById("labSelect").value;
+        const date = document.getElementById("bookingDate").value;
 
-        if (db) {
-            db.ref("bookings").push().set(newBooking, (err) => {
-                if (err) {
-                    alert("Error syncing to cloud: " + err.message);
-                } else {
-                    alert(`Slot successfully booked for ${newBooking.lab} on ${newBooking.date} (${newBooking.slot})!`);
+        // Save each selected 1-hour slot
+        let completed = 0;
+        selectedSlotsArray.forEach(slot => {
+            const newBooking = {
+                userName,
+                role,
+                userId,
+                semester: semKey,
+                section: sectionVal,
+                course,
+                lab,
+                date,
+                slot,
+                timestamp: Date.now()
+            };
+
+            if (db) {
+                db.ref("bookings").push().set(newBooking, (err) => {
+                    completed++;
+                    if (completed === selectedSlotsArray.length) {
+                        alert(`Successfully booked ${selectedSlotsArray.length} slot(s) for ${lab} on ${date}!`);
+                        resetAfterSubmit();
+                    }
+                });
+            } else {
+                liveBookingsCache.push(newBooking);
+                completed++;
+                if (completed === selectedSlotsArray.length) {
+                    localStorage.setItem("gitam_lab_bookings", JSON.stringify(liveBookingsCache));
+                    alert(`Locally booked ${selectedSlotsArray.length} slot(s) for ${lab} on ${date}!`);
+                    resetAfterSubmit();
                 }
-            });
-        } else {
-            liveBookingsCache.push(newBooking);
-            localStorage.setItem("gitam_lab_bookings", JSON.stringify(liveBookingsCache));
-            alert(`Slot booked locally for ${newBooking.lab} on ${newBooking.date} (${newBooking.slot}).`);
-        }
+            }
+        });
+    };
 
+    function resetAfterSubmit() {
         document.getElementById("bookingForm").reset();
-        document.getElementById("selectedSlot").value = "";
+        selectedSlotsArray = [];
         document.getElementById("courseSelect").innerHTML = '<option value="">Select Semester First</option>';
         
         document.getElementById("bookingDate").value = todayISO;
@@ -517,7 +550,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.renderScheduleTable();
         window.renderCalendarGrid();
         window.generateMonthlyMatrix();
-    };
+    }
 
     window.handleSemesterChange();
     setupLiveListener();
