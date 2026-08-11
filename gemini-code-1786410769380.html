@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GITAM School of Architecture - Lab Slot Booking Portal</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase JS SDK (Compat mode for static sites) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-indigo-900 text-white py-6 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">GITAM School of Architecture</h1>
+                <p class="text-indigo-200 text-sm mt-0.5">Lab Booking Portal (1st July 2026 – 30th November 2026)</p>
+            </div>
+            <div class="hidden sm:block text-right text-xs text-indigo-300">
+                <span>Timings: 08:00 AM - 05:00 PM</span><br>
+                <span>Break: 12:00 PM - 01:00 PM</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- SECTION 1: BOOKING FORM -->
+        <section class="lg:col-span-5 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+            <h2 class="text-lg font-bold mb-4 text-indigo-900 border-b pb-2 flex items-center justify-between">
+                <span>New Booking Request</span>
+                <span class="text-xs font-normal text-slate-500">*Odd Semesters Only</span>
+            </h2>
+            
+            <form id="bookingForm" class="space-y-4">
+                <!-- Name -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Full Name</label>
+                    <input type="text" id="userName" placeholder="Enter full name" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                </div>
+
+                <!-- Role & ID -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Role</label>
+                        <select id="userRole" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
+                            <option value="">Select</option>
+                            <option value="Student">Student</option>
+                            <option value="Faculty">Faculty</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Roll / Employee ID</label>
+                        <input type="text" id="userId" placeholder="ID Number" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                    </div>
+                </div>
+
+                <!-- Semester & Lab -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Semester</label>
+                        <select id="semesterSelect" required onchange="populateCourses()" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
+                            <option value="">Select</option>
+                            <option value="I">Sem I</option>
+                            <option value="III">Sem III</option>
+                            <option value="V">Sem V</option>
+                            <option value="VII">Sem VII</option>
+                            <option value="IX">Sem IX</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Lab Facility</label>
+                        <select id="labSelect" required onchange="checkSlotAvailability()" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
+                            <option value="">Select Lab</option>
+                            <option value="Maker Space">Maker Space</option>
+                            <option value="Computer Lab">Computer Lab</option>
+                            <option value="VR Lab">VR Lab</option>
+                            <option value="Climo Lab">Climo Lab</option>
+                            <option value="3D Printer Lab">3D Printer Lab</option>
+                            <option value="Art Court">Art Court</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Course Selection (Filtered by Semester) -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Course</label>
+                    <select id="courseSelect" required class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
+                        <option value="">Select Semester First</option>
+                    </select>
+                </div>
+
+                <!-- Date Picker (July 1, 2026 to Nov 30, 2026) -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Date</label>
+                    <input type="date" id="bookingDate" min="2026-07-01" max="2026-11-30" required onchange="checkSlotAvailability()" class="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                </div>
+
+                <!-- Available Dynamic Slots -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-600 mb-1">Select 2-Hour Slot</label>
+                    <div id="slotsContainer" class="grid grid-cols-2 gap-2 mt-2">
+                        <p class="text-xs text-slate-400 col-span-2 py-2">Select Lab and Date to see available slots.</p>
+                    </div>
+                </div>
+
+                <!-- Hidden Input for Selected Slot -->
+                <input type="hidden" id="selectedSlot" required>
+
+                <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg shadow-md transition duration-200 text-sm">
+                    Confirm & Book Slot
+                </button>
+            </form>
+        </section>
+
+        <!-- SECTION 2: TIMETABLE & OVERVIEW -->
+        <section class="lg:col-span-7 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b pb-3">
+                <h2 class="text-lg font-bold text-indigo-900">Lab Schedule Overview</h2>
+                <div class="flex items-center gap-2">
+                    <label for="filterDate" class="text-xs font-semibold text-slate-600 uppercase">View Date:</label>
+                    <input type="date" id="filterDate" min="2026-07-01" max="2026-11-30" value="2026-07-01" onchange="renderScheduleTable()" class="p-1.5 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- Schedule Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-[11px] text-slate-600 uppercase tracking-wider">
+                            <th class="p-3 border-b">Time Slot</th>
+                            <th class="p-3 border-b">Lab</th>
+                            <th class="p-3 border-b">Course / User Info</th>
+                            <th class="p-3 border-b">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleTableBody" class="text-xs divide-y divide-slate-100">
+                        <tr>
+                            <td colspan="4" class="p-4 text-center text-slate-400">Loading schedules...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Custom Script -->
+    <script src="app.js"></script>
+</body>
+</html>
