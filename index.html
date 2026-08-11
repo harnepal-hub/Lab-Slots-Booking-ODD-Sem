@@ -38,7 +38,7 @@
     
     <link rel="stylesheet" href="style.css">
 
-    <!-- Firebase JS SDK (Compat Mode) -->
+    <!-- Firebase JS SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
@@ -169,16 +169,17 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Available 2-Hour Slots</label>
-                        <div id="slotsContainer" class="grid grid-cols-2 gap-2 mt-2 min-h-[80px]">
-                            <p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2">⚠️ Please select both a <strong>Lab Facility</strong> and a <strong>Booking Date</strong> above to view slots.</p>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-bold uppercase text-slate-700">Available 1-Hour Slots</label>
+                            <span class="text-[10px] text-gitam-teal font-semibold">(Click multiple to select continuously)</span>
+                        </div>
+                        <div id="slotsContainer" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 min-h-[100px]">
+                            <p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2 sm:col-span-4">⚠️ Please select both a <strong>Lab Facility</strong> and a <strong>Booking Date</strong> above to view slots.</p>
                         </div>
                     </div>
 
-                    <input type="hidden" id="selectedSlot" required>
-
                     <button type="submit" id="submitBtn" class="w-full bg-gitam-teal hover:bg-gitam-tealDark text-white font-bold py-3 rounded-md shadow transition duration-200 text-sm uppercase tracking-wider">
-                        Confirm & Book Slot
+                        Confirm & Book Selected Slot(s)
                     </button>
                 </form>
             </section>
@@ -187,11 +188,11 @@
                 <div>
                     <h3 class="text-md font-bold text-gitam-teal uppercase mb-2">Instructions & Guidelines</h3>
                     <ul class="text-xs space-y-2 text-slate-600 list-disc pl-4">
-                        <li>Slots are strictly allocated in 2-hour durations.</li>
-                        <li>The portal operates between <strong>08:00 AM – 05:00 PM</strong> with a mandatory break from 12:00 PM to 01:00 PM.</li>
-                        <li><strong>Semesters I, III, V</strong> are split into <strong>Section A</strong> and <strong>Section B</strong>.</li>
-                        <li>Available Labs: <strong>Maker Space</strong>, <strong>Computer Lab</strong>, <strong>VR Lab</strong>, <strong>Climo Lab</strong>, <strong>3D Printer Lab</strong>, <strong>Art Court</strong>, and <strong>Building Materials Lab</strong>.</li>
-                        <li>When a slot is booked, it is locked out across all connected devices in real time.</li>
+                        <li>Slots are divided into <strong>1-hour increments</strong> (`08-09`, `09-10`, `10-11`, `11-12`, `01-02`, `02-03`, `03-04`, `04-05`).</li>
+                        <li><strong>Multi-Slot Selection</strong>: You can click and highlight multiple 1-hour slots at once to book longer continuous sessions.</li>
+                        <li><strong>12:00 PM – 01:00 PM</strong> is strictly reserved for Lunch Break and is locked.</li>
+                        <li><strong>Semesters I, III, V</strong> support Section A and Section B.</li>
+                        <li>When slots are booked, they lock out across all connected devices in real time.</li>
                     </ul>
                 </div>
             </section>
@@ -298,12 +299,16 @@
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
                             <tr class="bg-gitam-teal text-white uppercase text-[10px] tracking-wider">
-                                <th class="p-3 border border-emerald-900 w-28">Date</th>
-                                <th class="p-3 border border-emerald-900">08:00 AM - 10:00 AM</th>
-                                <th class="p-3 border border-emerald-900">10:00 AM - 12:00 PM</th>
-                                <th class="p-3 border border-emerald-900 bg-emerald-900 text-slate-300 text-center w-20">12 - 1 PM</th>
-                                <th class="p-3 border border-emerald-900">01:00 PM - 03:00 PM</th>
-                                <th class="p-3 border border-emerald-900">03:00 PM - 05:00 PM</th>
+                                <th class="p-2 border border-emerald-900 w-24">Date</th>
+                                <th class="p-2 border border-emerald-900">08-09 AM</th>
+                                <th class="p-2 border border-emerald-900">09-10 AM</th>
+                                <th class="p-2 border border-emerald-900">10-11 AM</th>
+                                <th class="p-2 border border-emerald-900">11-12 PM</th>
+                                <th class="p-2 border border-emerald-900 bg-emerald-900 text-slate-300 text-center w-16">12-1 PM</th>
+                                <th class="p-2 border border-emerald-900">01-02 PM</th>
+                                <th class="p-2 border border-emerald-900">02-03 PM</th>
+                                <th class="p-2 border border-emerald-900">03-04 PM</th>
+                                <th class="p-2 border border-emerald-900">04-05 PM</th>
                             </tr>
                         </thead>
                         <tbody id="matrixTableBody" class="divide-y divide-slate-200">
@@ -319,7 +324,6 @@
         <p>&copy; 2026 GITAM (Deemed to be University) — School of Architecture. All rights reserved.</p>
     </footer>
 
-    <!-- Force fresh script fetch with version tag -->
-    <script src="app.js?v=2.0"></script>
+    <script src="app.js?v=3.0"></script>
 </body>
 </html>
