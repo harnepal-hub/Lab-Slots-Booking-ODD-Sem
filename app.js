@@ -130,6 +130,21 @@ window.switchTab = function(tabId) {
     if (tabId === 'dailyTab') window.renderScheduleTable();
 };
 
+// Handle Semester Change (Toggle Section A/B for Sem I, III, V)
+window.handleSemesterChange = function() {
+    const sem = document.getElementById("semesterSelect").value;
+    const secContainer = document.getElementById("sectionContainer");
+
+    if (["I", "III", "V"].includes(sem)) {
+        secContainer.classList.remove("hidden");
+    } else {
+        secContainer.classList.add("hidden");
+    }
+
+    window.populateCourses();
+    window.checkSlotAvailability();
+};
+
 window.populateCourses = function() {
     const sem = document.getElementById("semesterSelect").value;
     const courseSelect = document.getElementById("courseSelect");
@@ -210,6 +225,7 @@ window.renderScheduleTable = function() {
     data.sort((a, b) => a.slot.localeCompare(b.slot));
 
     data.forEach(b => {
+        const sectionBadge = b.section ? ` (Sec ${b.section})` : '';
         const row = document.createElement("tr");
         row.className = "transition";
         row.innerHTML = `
@@ -217,7 +233,7 @@ window.renderScheduleTable = function() {
             <td class="p-3 border-b font-bold text-gitam-teal">${b.lab}</td>
             <td class="p-3 border-b">
                 <div class="font-semibold text-slate-800">${b.course}</div>
-                <div class="text-[11px] text-slate-500">${b.userName} (${b.role} — ${b.userId}) | Sem ${b.semester}</div>
+                <div class="text-[11px] text-slate-500">${b.userName} (${b.role} — ${b.userId}) | Sem ${b.semester}${sectionBadge}</div>
             </td>
             <td class="p-3 border-b text-center">
                 <span class="bg-red-100 text-red-800 border border-red-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Filled</span>
@@ -293,7 +309,8 @@ window.renderCalendarGrid = function() {
                                  b.slot.startsWith("10") ? "10am" : 
                                  b.slot.startsWith("01") ? "1pm" : "3pm";
 
-                badge.innerHTML = `<span>${shortTime}</span> <span class="font-bold">田 ${b.lab}</span>`;
+                const secTag = b.section ? `-${b.section}` : '';
+                badge.innerHTML = `<span>${shortTime}</span> <span class="font-bold">田 ${b.lab}</span> <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">S${b.semester}${secTag}</span>`;
                 badge.title = `${b.lab} | ${b.course} | ${b.userName} (${b.role})`;
                 eventsContainer.appendChild(badge);
             });
@@ -359,16 +376,17 @@ function renderConsolidatedSlotCell(bookings) {
         return '<span class="text-slate-300 text-[11px] font-normal italic">Free</span>';
     }
 
-    return bookings.map(b => `
-        <div class="mb-1.5 p-1.5 bg-emerald-50 border border-emerald-200 rounded text-[11px] shadow-2xs">
+    return bookings.map(b => {
+        const secText = b.section ? ` Sec ${b.section}` : '';
+        return `<div class="mb-1.5 p-1.5 bg-emerald-50 border border-emerald-200 rounded text-[11px] shadow-2xs">
             <div class="font-bold text-gitam-teal flex items-center justify-between">
                 <span>🏷️ ${b.lab}</span>
-                <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">Sem ${b.semester}</span>
+                <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">Sem ${b.semester}${secText}</span>
             </div>
             <div class="text-[10px] font-semibold text-slate-700 mt-0.5 truncate">${b.course}</div>
             <div class="text-[9px] text-slate-500">${b.userName} (${b.role})</div>
-        </div>
-    `).join("");
+        </div>`;
+    }).join("");
 }
 
 window.exportToCSV = function() {
@@ -378,7 +396,7 @@ window.exportToCSV = function() {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Date,Lab Facility,Time Slot,Semester,Course Code & Name,User Name,Role,ID Number\n";
+    csvContent += "Date,Lab Facility,Time Slot,Semester,Section,Course Code & Name,User Name,Role,ID Number\n";
 
     liveBookingsCache.forEach(b => {
         const row = [
@@ -386,6 +404,7 @@ window.exportToCSV = function() {
             `"${b.lab}"`,
             `"${b.slot}"`,
             `"${b.semester}"`,
+            `"${b.section || 'N/A'}"`,
             `"${b.course.replace(/"/g, '""')}"`,
             `"${b.userName.replace(/"/g, '""')}"`,
             `"${b.role}"`,
@@ -419,11 +438,15 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        const sem = document.getElementById("semesterSelect").value;
+        const sectionVal = ["I", "III", "V"].includes(sem) ? document.getElementById("sectionSelect").value : null;
+
         const newBooking = {
             userName: document.getElementById("userName").value.trim(),
             role: document.getElementById("userRole").value,
             userId: document.getElementById("userId").value.trim(),
-            semester: document.getElementById("semesterSelect").value,
+            semester: sem,
+            section: sectionVal,
             course: document.getElementById("courseSelect").value,
             lab: document.getElementById("labSelect").value,
             date: document.getElementById("bookingDate").value,
@@ -452,12 +475,13 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("bookingDate").value = todayISO;
         document.getElementById("filterDate").value = todayISO;
 
+        window.handleSemesterChange();
         window.checkSlotAvailability();
         window.renderScheduleTable();
         window.renderCalendarGrid();
         window.generateMonthlyMatrix();
     };
 
-    window.populateCourses();
+    window.handleSemesterChange();
     setupLiveListener();
 });
