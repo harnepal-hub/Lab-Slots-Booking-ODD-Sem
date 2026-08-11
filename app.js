@@ -125,7 +125,6 @@ window.switchTab = function(tabId) {
     if (targetContent) targetContent.classList.remove("hidden");
     if (targetTabBtn) targetTabBtn.classList.add("active");
 
-    // Trigger specific render functions on view switch
     if (tabId === 'calendarGridTab') window.renderCalendarGrid();
     if (tabId === 'matrixTab') window.generateMonthlyMatrix();
     if (tabId === 'dailyTab') window.renderScheduleTable();
