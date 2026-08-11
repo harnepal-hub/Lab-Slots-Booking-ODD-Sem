@@ -2,6 +2,17 @@ body {
     font-family: 'Open Sans', sans-serif;
 }
 
+.tab-btn {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #e6f2f0;
+}
+
+.tab-btn.active {
+    background-color: #ffffff;
+    color: #006654;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+}
+
 .slot-btn {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -19,6 +30,16 @@ body {
     color: #ffffff !important;
     border-color: #004d3f !important;
     box-shadow: 0 4px 6px -1px rgba(0, 102, 84, 0.3);
+}
+
+.cal-day-cell {
+    min-height: 120px;
+    background-color: #ffffff;
+}
+
+.cal-day-cell.other-month {
+    background-color: #f8fafc;
+    color: #cbd5e1;
 }
 
 tbody tr:hover {
