@@ -71,25 +71,18 @@ const standardSlots = [
     "03:00 PM - 05:00 PM"
 ];
 
-// --- 2. FIREBASE CONFIGURATION ---
-// Replace the values below with your credentials from the Firebase Console
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "SENDER_ID",
-    appId: "APP_ID"
-};
-
-// Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+// Local Storage Fallback Engine
+function getLocalBookings() {
+    return JSON.parse(localStorage.getItem("gitam_lab_bookings") || "[]");
 }
-const db = firebase.database();
 
-// --- 3. DYNAMIC COURSE DROPDOWN ---
+function saveLocalBooking(booking) {
+    const current = getLocalBookings();
+    current.push(booking);
+    localStorage.setItem("gitam_lab_bookings", JSON.stringify(current));
+}
+
+// Populate Courses based on Semester
 function populateCourses() {
     const sem = document.getElementById("semesterSelect").value;
     const courseSelect = document.getElementById("courseSelect");
@@ -105,7 +98,7 @@ function populateCourses() {
     }
 }
 
-// --- 4. CHECK & LOCK OCCUPIED SLOTS IN REALTIME ---
+// Check Slot Availability
 function checkSlotAvailability() {
     const lab = document.getElementById("labSelect").value;
     const date = document.getElementById("bookingDate").value;
@@ -113,51 +106,45 @@ function checkSlotAvailability() {
     document.getElementById("selectedSlot").value = "";
 
     if (!lab || !date) {
-        container.innerHTML = '<p class="text-xs text-slate-400 col-span-2 py-2">Select Lab and Date to see available slots.</p>';
+        container.innerHTML = '<p class="text-xs text-slate-400 col-span-2 py-2">Select Lab and Date to see availability.</p>';
         return;
     }
 
-    // Realtime lookup for existing bookings on selected lab and date
-    db.ref("bookings").orderByChild("date").equalTo(date).on("value", (snapshot) => {
-        const bookedSlots = [];
-        snapshot.forEach((child) => {
-            const b = child.val();
-            if (b.lab === lab) {
-                bookedSlots.push(b.slot);
-            }
-        });
+    const allBookings = getLocalBookings();
+    const bookedSlots = allBookings
+        .filter(b => b.lab === lab && b.date === date)
+        .map(b => b.slot);
 
-        container.innerHTML = "";
-        standardSlots.forEach(slot => {
-            const isBooked = bookedSlots.includes(slot);
-            const btn = document.createElement("button");
-            btn.type = "button";
-            
-            if (isBooked) {
-                btn.className = "slot-btn disabled p-2 text-xs font-medium rounded-lg border w-full text-left flex justify-between items-center";
-                btn.innerHTML = `<span>${slot}</span> <span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase">Filled</span>`;
-                btn.disabled = true;
-            } else {
-                btn.className = "slot-btn p-2 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-600 hover:text-white w-full text-center";
-                btn.innerText = slot;
-                btn.onclick = () => {
-                    document.querySelectorAll("#slotsContainer button").forEach(b => b.classList.remove("selected"));
-                    btn.classList.add("selected");
-                    document.getElementById("selectedSlot").value = slot;
-                };
-            }
-            container.appendChild(btn);
-        });
+    container.innerHTML = "";
+    standardSlots.forEach(slot => {
+        const isBooked = bookedSlots.includes(slot);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        
+        if (isBooked) {
+            btn.className = "slot-btn disabled p-2 text-xs font-medium rounded-md border w-full text-left flex justify-between items-center";
+            btn.innerHTML = `<span>${slot}</span> <span class="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded border border-red-200 uppercase">Filled</span>`;
+            btn.disabled = true;
+        } else {
+            btn.className = "slot-btn p-2 text-xs font-semibold rounded-md border border-emerald-300 bg-emerald-50/50 text-gitam-teal hover:bg-gitam-teal hover:text-white w-full text-center";
+            btn.innerText = slot;
+            btn.onclick = () => {
+                document.querySelectorAll("#slotsContainer button").forEach(b => b.classList.remove("selected"));
+                btn.classList.add("selected");
+                document.getElementById("selectedSlot").value = slot;
+            };
+        }
+        container.appendChild(btn);
     });
 }
 
-// --- 5. FORM SUBMISSION LISTENER ---
+// Handle Form Submission
 document.getElementById("bookingForm").onsubmit = function(e) {
     e.preventDefault();
 
     const slot = document.getElementById("selectedSlot").value;
     if (!slot) {
-        alert("Please select an available slot.");
+        alert("Please click on one of the 2-hour slot buttons to select it.");
         return;
     }
 
@@ -173,59 +160,54 @@ document.getElementById("bookingForm").onsubmit = function(e) {
         timestamp: Date.now()
     };
 
-    // Save directly to Firebase Database
-    const newRef = db.ref("bookings").push();
-    newRef.set(newBooking, (error) => {
-        if (error) {
-            alert("Error saving booking: " + error.message);
-        } else {
-            alert(`Success! ${newBooking.lab} booked for ${newBooking.date} (${newBooking.slot}).`);
-            document.getElementById("bookingForm").reset();
-            document.getElementById("selectedSlot").value = "";
-            document.getElementById("courseSelect").innerHTML = '<option value="">Select Semester First</option>';
-            checkSlotAvailability();
-            renderScheduleTable();
-        }
-    });
+    saveLocalBooking(newBooking);
+    alert(`Slot successfully booked for ${newBooking.lab} on ${newBooking.date} (${newBooking.slot}).`);
+    
+    document.getElementById("bookingForm").reset();
+    document.getElementById("selectedSlot").value = "";
+    document.getElementById("courseSelect").innerHTML = '<option value="">Select Semester First</option>';
+    document.getElementById("slotsContainer").innerHTML = '<p class="text-xs text-slate-400 col-span-2 py-2">Select Lab and Date to see availability.</p>';
+    
+    renderScheduleTable();
 };
 
-// --- 6. RENDER TIMETABLE OVERVIEW ---
+// Render Schedule Table Overview
 function renderScheduleTable() {
     const date = document.getElementById("filterDate").value;
     const tbody = document.getElementById("scheduleTableBody");
+    tbody.innerHTML = "";
 
-    db.ref("bookings").orderByChild("date").equalTo(date).on("value", (snapshot) => {
-        tbody.innerHTML = "";
-        const data = [];
-        snapshot.forEach(c => { data.push(c.val()); });
+    const allBookings = getLocalBookings();
+    const data = allBookings.filter(b => b.date === date);
 
-        if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No slots booked for ${date}</td></tr>`;
-            return;
-        }
+    if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">No lab slots booked for ${date}</td></tr>`;
+        return;
+    }
 
-        data.sort((a, b) => a.slot.localeCompare(b.slot));
+    data.sort((a, b) => a.slot.localeCompare(b.slot));
 
-        data.forEach(b => {
-            const row = document.createElement("tr");
-            row.className = "hover:bg-slate-50";
-            row.innerHTML = `
-                <td class="p-3 border-b font-medium text-slate-700">${b.slot}</td>
-                <td class="p-3 border-b font-semibold text-indigo-900">${b.lab}</td>
-                <td class="p-3 border-b">
-                    <div class="font-medium text-slate-800">${b.course}</div>
-                    <div class="text-[11px] text-slate-500">${b.userName} (${b.role} - ${b.userId}) | Sem ${b.semester}</div>
-                </td>
-                <td class="p-3 border-b">
-                    <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Filled</span>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
+    data.forEach(b => {
+        const row = document.createElement("tr");
+        row.className = "transition";
+        row.innerHTML = `
+            <td class="p-3 border-b font-semibold text-slate-700">${b.slot}</td>
+            <td class="p-3 border-b font-bold text-gitam-teal">${b.lab}</td>
+            <td class="p-3 border-b">
+                <div class="font-semibold text-slate-800">${b.course}</div>
+                <div class="text-[11px] text-slate-500">${b.userName} (${b.role} — ${b.userId}) | Sem ${b.semester}</div>
+            </td>
+            <td class="p-3 border-b text-center">
+                <span class="bg-red-100 text-red-800 border border-red-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Filled</span>
+            </td>
+        `;
+        tbody.appendChild(row);
     });
 }
 
-// Initial table load
 window.onload = function() {
+    // Sync filter date with current date input if available
+    const today = "2026-07-01";
+    document.getElementById("filterDate").value = today;
     renderScheduleTable();
 };
