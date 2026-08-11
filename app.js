@@ -1,4 +1,4 @@
-// --- ODD SEMESTER CURRICULUM DATA ---
+// --- 1. ODD SEMESTER CURRICULUM DATA ---
 const courseData = {
     "I": [
         { code: "AAR111", name: "Introduction to Art and Architecture" },
@@ -71,17 +71,50 @@ const standardSlots = [
     "03:00 PM - 05:00 PM"
 ];
 
-function getLocalBookings() {
-    return JSON.parse(localStorage.getItem("gitam_lab_bookings") || "[]");
+// --- 2. YOUR FIREBASE PROJECT CONFIGURATION ---
+const firebaseConfig = {
+    apiKey: "AIzaSyA4IgmrsJ3v3qzzCtHJbzggBUVkVUqOj0Q",
+    authDomain: "gitam-lab-booking.firebaseapp.com",
+    databaseURL: "https://gitam-lab-booking-default-rtdb.firebaseio.com",
+    projectId: "gitam-lab-booking",
+    storageBucket: "gitam-lab-booking.firebasestorage.app",
+    messagingSenderId: "795740333591",
+    appId: "1:795740333591:web:84fbca920e554112a39e52",
+    measurementId: "G-V7XJD4WZ1P"
+};
+
+let db = null;
+let liveBookingsCache = [];
+
+try {
+    if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+    } else if (typeof firebase !== 'undefined') {
+        db = firebase.database();
+    }
+} catch (e) {
+    console.warn("Firebase fallback active.", e);
 }
 
-function saveLocalBooking(booking) {
-    const current = getLocalBookings();
-    current.push(booking);
-    localStorage.setItem("gitam_lab_bookings", JSON.stringify(current));
+// Subscribe to Live Realtime Database Updates
+function setupLiveListener() {
+    if (db) {
+        db.ref("bookings").on("value", (snapshot) => {
+            liveBookingsCache = [];
+            snapshot.forEach(child => {
+                liveBookingsCache.push(child.val());
+            });
+            window.checkSlotAvailability();
+            window.renderScheduleTable();
+            window.generateMonthlyMatrix();
+        });
+    } else {
+        liveBookingsCache = JSON.parse(localStorage.getItem("gitam_lab_bookings") || "[]");
+    }
 }
 
-// Global functions for inline HTML event triggers
+// Global functions for inline HTML triggers
 window.populateCourses = function() {
     const sem = document.getElementById("semesterSelect").value;
     const courseSelect = document.getElementById("courseSelect");
@@ -118,8 +151,7 @@ window.checkSlotAvailability = function() {
         return;
     }
 
-    const allBookings = getLocalBookings();
-    const bookedSlots = allBookings
+    const bookedSlots = liveBookingsCache
         .filter(b => b.lab === lab && b.date === date)
         .map(b => b.slot);
 
@@ -153,8 +185,7 @@ window.renderScheduleTable = function() {
 
     if (!date) return;
 
-    const allBookings = getLocalBookings();
-    const data = allBookings.filter(b => b.date === date);
+    const data = liveBookingsCache.filter(b => b.date === date);
 
     if (data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">No lab slots booked for ${date}</td></tr>`;
@@ -189,8 +220,7 @@ window.generateMonthlyMatrix = function() {
 
     if (!selectedMonth) return;
 
-    const allBookings = getLocalBookings();
-    const monthBookings = allBookings.filter(b => {
+    const monthBookings = liveBookingsCache.filter(b => {
         const matchesMonth = b.date.startsWith(selectedMonth);
         const matchesLab = (selectedLab === "ALL") || (b.lab === selectedLab);
         return matchesMonth && matchesLab;
@@ -240,8 +270,7 @@ function formatSlotCell(b) {
 }
 
 window.exportToCSV = function() {
-    const allBookings = getLocalBookings();
-    if (allBookings.length === 0) {
+    if (liveBookingsCache.length === 0) {
         alert("No booking data available to export.");
         return;
     }
@@ -249,7 +278,7 @@ window.exportToCSV = function() {
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "Date,Lab Facility,Time Slot,Semester,Course Code & Name,User Name,Role,ID Number\n";
 
-    allBookings.forEach(b => {
+    liveBookingsCache.forEach(b => {
         const row = [
             `"${b.date}"`,
             `"${b.lab}"`,
@@ -300,9 +329,20 @@ document.addEventListener("DOMContentLoaded", () => {
             timestamp: Date.now()
         };
 
-        saveLocalBooking(newBooking);
-        alert(`Slot successfully booked for ${newBooking.lab} on ${newBooking.date} (${newBooking.slot}).`);
-        
+        if (db) {
+            db.ref("bookings").push().set(newBooking, (err) => {
+                if (err) {
+                    alert("Error syncing to cloud: " + err.message);
+                } else {
+                    alert(`Slot successfully booked for ${newBooking.lab} on ${newBooking.date} (${newBooking.slot})!`);
+                }
+            });
+        } else {
+            liveBookingsCache.push(newBooking);
+            localStorage.setItem("gitam_lab_bookings", JSON.stringify(liveBookingsCache));
+            alert(`Slot booked locally for ${newBooking.lab} on ${newBooking.date} (${newBooking.slot}).`);
+        }
+
         document.getElementById("bookingForm").reset();
         document.getElementById("selectedSlot").value = "";
         document.getElementById("courseSelect").innerHTML = '<option value="">Select Semester First</option>';
@@ -316,7 +356,5 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     window.populateCourses();
-    window.checkSlotAvailability();
-    window.renderScheduleTable();
-    window.generateMonthlyMatrix();
+    setupLiveListener();
 });
