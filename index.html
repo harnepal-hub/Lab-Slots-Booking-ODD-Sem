@@ -72,16 +72,16 @@
 
         <!-- PAGE NAVIGATION TABS -->
         <nav class="max-w-7xl mx-auto px-6 mt-2 flex flex-wrap gap-2 border-t border-emerald-800/60 pt-2">
-            <button onclick="switchTab('bookingTab')" id="tab-bookingTab" class="tab-btn active text-xs font-bold px-4 py-2 rounded-t-lg transition">
+            <button type="button" onclick="switchTab('bookingTab')" id="tab-bookingTab" class="tab-btn active text-xs font-bold px-4 py-2 rounded-t-lg transition cursor-pointer">
                 📝 Book a Slot
             </button>
-            <button onclick="switchTab('dailyTab')" id="tab-dailyTab" class="tab-btn text-xs font-bold px-4 py-2 rounded-t-lg transition">
+            <button type="button" onclick="switchTab('dailyTab')" id="tab-dailyTab" class="tab-btn text-xs font-bold px-4 py-2 rounded-t-lg transition cursor-pointer">
                 📅 Daily Schedule
             </button>
-            <button onclick="switchTab('calendarGridTab')" id="tab-calendarGridTab" class="tab-btn text-xs font-bold px-4 py-2 rounded-t-lg transition">
+            <button type="button" onclick="switchTab('calendarGridTab')" id="tab-calendarGridTab" class="tab-btn text-xs font-bold px-4 py-2 rounded-t-lg transition cursor-pointer">
                 🗓️ Google Calendar View
             </button>
-            <button onclick="switchTab('matrixTab')" id="tab-matrixTab" class="tab-btn text-xs font-bold px-4 py-2 rounded-t-lg transition">
+            <button type="button" onclick="switchTab('matrixTab')" id="tab-matrixTab" class="tab-btn text-xs font-bold px-4 py-2 rounded-t-lg transition cursor-pointer">
                 📊 Master Table Matrix
             </button>
         </nav>
@@ -246,7 +246,6 @@
                     </div>
                 </div>
 
-                <!-- Calendar 7-Column Grid -->
                 <div class="border border-slate-200 rounded-lg overflow-hidden bg-slate-200">
                     <div class="grid grid-cols-7 bg-gitam-teal text-white text-[11px] font-bold uppercase tracking-wider text-center py-2">
                         <div>Sun</div>
