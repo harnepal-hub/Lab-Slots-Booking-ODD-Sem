@@ -97,7 +97,7 @@ try {
     console.warn("Firebase fallback active.", e);
 }
 
-// Subscribe to Live Realtime Database Updates
+// Subscribe to Live Realtime Database Updates Across All Devices
 function setupLiveListener() {
     if (db) {
         db.ref("bookings").on("value", (snapshot) => {
