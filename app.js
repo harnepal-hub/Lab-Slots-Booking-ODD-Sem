@@ -109,7 +109,11 @@ function setupLiveListener() {
         db.ref("bookings").on("value", (snapshot) => {
             liveBookingsCache = [];
             snapshot.forEach(child => {
-                liveBookingsCache.push(child.val());
+                // Store Firebase key alongside data so we can delete by ID
+                liveBookingsCache.push({
+                    key: child.key,
+                    ...child.val()
+                });
             });
             window.checkSlotAvailability();
             window.renderScheduleTable();
@@ -249,6 +253,7 @@ window.checkSlotAvailability = function() {
     });
 };
 
+// DAILY SCHEDULE TABLE WITH DELETE / CANCEL ACTION
 window.renderScheduleTable = function() {
     const rawDate = document.getElementById("filterDate").value;
     const date = normalizeDateISO(rawDate);
@@ -269,7 +274,7 @@ window.renderScheduleTable = function() {
     data.forEach(b => {
         const sectionBadge = b.section ? ` (Sec ${b.section})` : '';
         const row = document.createElement("tr");
-        row.className = "transition";
+        row.className = "transition hover:bg-slate-50";
         row.innerHTML = `
             <td class="p-3 border-b font-semibold text-slate-700">${b.slot}</td>
             <td class="p-3 border-b font-bold text-gitam-teal">${b.lab}</td>
@@ -278,11 +283,41 @@ window.renderScheduleTable = function() {
                 <div class="text-[11px] text-slate-500">${b.userName} (${b.role} — ${b.userId}) | Sem ${b.semester}${sectionBadge}</div>
             </td>
             <td class="p-3 border-b text-center">
-                <span class="bg-red-100 text-red-800 border border-red-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Filled</span>
+                <button type="button" onclick="deleteBooking('${b.key}')" class="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-200 px-2 py-1 rounded text-[11px] font-bold uppercase transition shadow-2xs cursor-pointer">
+                    🗑️ Delete Slot
+                </button>
             </td>
         `;
         tbody.appendChild(row);
     });
+};
+
+// DELETE / CANCEL BOOKING FUNCTION
+window.deleteBooking = function(bookingKey) {
+    if (!bookingKey) {
+        alert("Booking ID invalid.");
+        return;
+    }
+
+    if (confirm("Are you sure you want to delete/cancel this booked slot? This will free up the slot for others instantly.")) {
+        if (db) {
+            db.ref("bookings").child(bookingKey).remove((err) => {
+                if (err) {
+                    alert("Failed to delete booking: " + err.message);
+                } else {
+                    alert("Slot successfully deleted and freed up!");
+                }
+            });
+        } else {
+            liveBookingsCache = liveBookingsCache.filter(b => b.key !== bookingKey);
+            localStorage.setItem("gitam_lab_bookings", JSON.stringify(liveBookingsCache));
+            alert("Slot deleted locally!");
+            window.checkSlotAvailability();
+            window.renderScheduleTable();
+            window.renderCalendarGrid();
+            window.generateMonthlyMatrix();
+        }
+    }
 };
 
 window.renderCalendarGrid = function() {
@@ -344,11 +379,14 @@ window.renderCalendarGrid = function() {
 
             dayBookings.forEach(b => {
                 const badge = document.createElement("div");
-                badge.className = "bg-emerald-100/80 border border-emerald-300 text-gitam-teal text-[10px] p-1 rounded font-semibold truncate";
+                badge.className = "bg-emerald-100/80 border border-emerald-300 text-gitam-teal text-[10px] p-1 rounded font-semibold truncate flex items-center justify-between group";
                 
                 const shortTime = b.slot.split(" ")[0];
                 const secTag = b.section ? `-${b.section}` : '';
-                badge.innerHTML = `<span>${shortTime}</span> <span class="font-bold">${b.lab}</span> <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">S${b.semester}${secTag}</span>`;
+                badge.innerHTML = `
+                    <span class="truncate"><span>${shortTime}</span> <span class="font-bold">${b.lab}</span> <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">S${b.semester}${secTag}</span></span>
+                    <button type="button" onclick="deleteBooking('${b.key}')" class="text-red-600 hover:text-red-800 font-bold ml-1 text-[11px]" title="Delete booking">×</button>
+                `;
                 badge.title = `${b.lab} | ${b.course} | ${b.userName} (${b.role})`;
                 eventsContainer.appendChild(badge);
             });
@@ -429,8 +467,11 @@ function renderConsolidatedSlotCell(bookings) {
 
     return bookings.map(b => {
         const secText = b.section ? ` Sec ${b.section}` : '';
-        return `<div class="mb-1 p-1 bg-emerald-50 border border-emerald-200 rounded text-[10px]">
-            <div class="font-bold text-gitam-teal truncate">${b.lab}</div>
+        return `<div class="mb-1 p-1 bg-emerald-50 border border-emerald-200 rounded text-[10px] relative group">
+            <div class="font-bold text-gitam-teal flex justify-between items-center">
+                <span class="truncate">${b.lab}</span>
+                <button type="button" onclick="deleteBooking('${b.key}')" class="text-red-500 hover:text-red-700 font-bold text-[10px] ml-1" title="Delete slot">×</button>
+            </div>
             <div class="text-[9px] text-slate-600 truncate">${b.course.split(':')[0]} (Sem ${b.semester}${secText})</div>
         </div>`;
     }).join("");
@@ -464,7 +505,7 @@ window.exportToCSV = function() {
     triggerBlobDownload(csvRows.join("\n"), `GITAM_Lab_Timetable_Export_${new Date().toISOString().slice(0,10)}.csv`);
 };
 
-// 2. NEW: LAB-WISE MONTHLY EXPORT (Grouped by Lab -> Sorted Date-Wise -> Continuous Slots Merged)
+// 2. LAB-WISE MONTHLY EXPORT
 window.exportLabWiseCSV = function() {
     if (liveBookingsCache.length === 0) {
         alert("No booking data available to export.");
@@ -488,7 +529,6 @@ window.exportLabWiseCSV = function() {
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
     };
 
-    // Sort primary by Lab Facility -> Date -> Semester -> Section -> Time
     const sorted = [...liveBookingsCache].sort((a, b) => {
         if (a.lab !== b.lab) return a.lab.localeCompare(b.lab);
         if (a.date !== b.date) return a.date.localeCompare(b.date);
