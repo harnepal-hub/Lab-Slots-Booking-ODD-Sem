@@ -64,23 +64,21 @@ const courseData = {
     ]
 };
 
-// 1-HOUR SLOTS DEFINITION
 const standardSlots = [
     "08:00 AM - 09:00 AM",
     "09:00 AM - 10:00 AM",
     "10:00 AM - 11:00 AM",
     "11:00 AM - 12:00 PM",
-    "12:00 PM - 01:00 PM", // LUNCH (LOCKED)
+    "12:00 PM - 01:00 PM", // LUNCH
     "01:00 PM - 02:00 PM",
     "02:00 PM - 03:00 PM",
     "03:00 PM - 04:00 PM",
     "04:00 PM - 05:00 PM"
 ];
 
-// Array to store multi-selected slots
 let selectedSlotsArray = [];
 
-// --- 2. YOUR FIREBASE PROJECT CONFIGURATION ---
+// --- 2. FIREBASE PROJECT CONFIGURATION ---
 const firebaseConfig = {
     apiKey: "AIzaSyA4IgmrsJ3v3qzzCtHJbzggBUVkVUqOj0Q",
     authDomain: "gitam-lab-booking.firebaseapp.com",
@@ -135,6 +133,18 @@ function getCleanSemKey(semVal) {
     return "";
 }
 
+function normalizeDateISO(dateVal) {
+    if (!dateVal) return "";
+    if (dateVal.includes("/")) {
+        const parts = dateVal.split("/");
+        if (parts.length === 3) {
+            if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+            return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+        }
+    }
+    return dateVal;
+}
+
 window.switchTab = function(tabId) {
     document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
     document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
@@ -185,7 +195,8 @@ window.populateCourses = function() {
 
 window.checkSlotAvailability = function() {
     const lab = document.getElementById("labSelect").value;
-    const date = document.getElementById("bookingDate").value;
+    const rawDate = document.getElementById("bookingDate").value;
+    const date = normalizeDateISO(rawDate);
     const container = document.getElementById("slotsContainer");
     selectedSlotsArray = [];
 
@@ -203,7 +214,7 @@ window.checkSlotAvailability = function() {
     }
 
     const bookedSlots = liveBookingsCache
-        .filter(b => b.lab === lab && b.date === date)
+        .filter(b => b.lab === lab && normalizeDateISO(b.date) === date)
         .map(b => b.slot);
 
     container.innerHTML = "";
@@ -239,13 +250,14 @@ window.checkSlotAvailability = function() {
 };
 
 window.renderScheduleTable = function() {
-    const date = document.getElementById("filterDate").value;
+    const rawDate = document.getElementById("filterDate").value;
+    const date = normalizeDateISO(rawDate);
     const tbody = document.getElementById("scheduleTableBody");
     tbody.innerHTML = "";
 
     if (!date) return;
 
-    const data = liveBookingsCache.filter(b => b.date === date);
+    const data = liveBookingsCache.filter(b => normalizeDateISO(b.date) === date);
 
     if (data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">No lab slots booked for ${date}</td></tr>`;
@@ -319,7 +331,7 @@ window.renderCalendarGrid = function() {
         dayCell.appendChild(dayHeader);
 
         const dayBookings = liveBookingsCache.filter(b => {
-            const matchesDate = b.date === dateISO;
+            const matchesDate = normalizeDateISO(b.date) === dateISO;
             const matchesLab = (labVal === "ALL") || (b.lab === labVal);
             return matchesDate && matchesLab;
         });
@@ -334,9 +346,10 @@ window.renderCalendarGrid = function() {
                 const badge = document.createElement("div");
                 badge.className = "bg-emerald-100/80 border border-emerald-300 text-gitam-teal text-[10px] p-1 rounded font-semibold truncate";
                 
-                const shortTime = b.slot.split(" ")[0]; // Extract starting hour e.g. "08:00"
+                const shortTime = b.slot.split(" ")[0];
                 const secTag = b.section ? `-${b.section}` : '';
-                badge.innerHTML = `<span>${shortTime}</span> <span class="font-bold">田 ${b.lab}</span> <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">S${b.semester}${secTag}</span>`;
+                // REMOVED 田 ICON HERE
+                badge.innerHTML = `<span>${shortTime}</span> <span class="font-bold">${b.lab}</span> <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">S${b.semester}${secTag}</span>`;
                 badge.title = `${b.lab} | ${b.course} | ${b.userName} (${b.role})`;
                 eventsContainer.appendChild(badge);
             });
@@ -354,7 +367,7 @@ window.generateMonthlyMatrix = function() {
 
     if (!selectedMonth) return;
 
-    const monthBookings = liveBookingsCache.filter(b => b.date.startsWith(selectedMonth));
+    const monthBookings = liveBookingsCache.filter(b => normalizeDateISO(b.date).startsWith(selectedMonth));
 
     if (monthBookings.length === 0) {
         tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400">No bookings recorded for ${selectedMonth}.</td></tr>`;
@@ -363,8 +376,9 @@ window.generateMonthlyMatrix = function() {
 
     const groupedByDate = {};
     monthBookings.forEach(b => {
-        if (!groupedByDate[b.date]) {
-            groupedByDate[b.date] = {
+        const normDate = normalizeDateISO(b.date);
+        if (!groupedByDate[normDate]) {
+            groupedByDate[normDate] = {
                 "08:00 AM - 09:00 AM": [],
                 "09:00 AM - 10:00 AM": [],
                 "10:00 AM - 11:00 AM": [],
@@ -375,8 +389,8 @@ window.generateMonthlyMatrix = function() {
                 "04:00 PM - 05:00 PM": []
             };
         }
-        if (groupedByDate[b.date][b.slot]) {
-            groupedByDate[b.date][b.slot].push(b);
+        if (groupedByDate[normDate][b.slot]) {
+            groupedByDate[normDate][b.slot].push(b);
         }
     });
 
@@ -416,8 +430,9 @@ function renderConsolidatedSlotCell(bookings) {
 
     return bookings.map(b => {
         const secText = b.section ? ` Sec ${b.section}` : '';
+        // REMOVED 田 ICON HERE
         return `<div class="mb-1 p-1 bg-emerald-50 border border-emerald-200 rounded text-[10px]">
-            <div class="font-bold text-gitam-teal truncate">田 ${b.lab}</div>
+            <div class="font-bold text-gitam-teal truncate">${b.lab}</div>
             <div class="text-[9px] text-slate-600 truncate">${b.course.split(':')[0]} (Sem ${b.semester}${secText})</div>
         </div>`;
     }).join("");
@@ -429,31 +444,35 @@ window.exportToCSV = function() {
         return;
     }
 
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Date,Lab Facility,Time Slot,Semester,Section,Course Code & Name,User Name,Role,ID Number\n";
+    let csvRows = [];
+    csvRows.push(["Date", "Lab Facility", "Time Slot", "Semester", "Section", "Course Code & Name", "User Name", "Role", "ID Number"].join(","));
 
     liveBookingsCache.forEach(b => {
         const row = [
-            `"${b.date}"`,
-            `"${b.lab}"`,
-            `"${b.slot}"`,
-            `"${b.semester}"`,
+            `"${b.date || ''}"`,
+            `"${b.lab || ''}"`,
+            `"${b.slot || ''}"`,
+            `"${b.semester || ''}"`,
             `"${b.section || 'N/A'}"`,
-            `"${b.course.replace(/"/g, '""')}"`,
-            `"${b.userName.replace(/"/g, '""')}"`,
-            `"${b.role}"`,
-            `"${b.userId}"`
+            `"${(b.course || '').replace(/"/g, '""')}"`,
+            `"${(b.userName || '').replace(/"/g, '""')}"`,
+            `"${b.role || ''}"`,
+            `"${b.userId || ''}"`
         ].join(",");
-        csvContent += row + "\n";
+        csvRows.push(row);
     });
 
-    const encodedUri = encodeURI(encodeURI(csvContent));
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute("download", `GITAM_Lab_Timetable_Export_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 };
 
 // Auto Initialization
@@ -494,14 +513,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const semKey = getCleanSemKey(rawSem);
         const sectionVal = ["I", "III", "V"].includes(semKey) ? document.getElementById("sectionSelect").value : null;
 
-        const userName = document.getElementById("userName").value.trim();
-        const role = document.getElementById("userRole").value;
-        const userId = document.getElementById("userId").value.trim();
-        const course = document.getElementById("courseSelect").value;
-        const lab = document.getElementById("labSelect").value;
-        const date = document.getElementById("bookingDate").value;
+        const userName = document.getElementById("userName").value.trim(),
+              role = document.getElementById("userRole").value,
+              userId = document.getElementById("userId").value.trim(),
+              course = document.getElementById("courseSelect").value,
+              lab = document.getElementById("labSelect").value,
+              rawDate = document.getElementById("bookingDate").value,
+              date = normalizeDateISO(rawDate);
 
-        // Save each selected 1-hour slot
         let completed = 0;
         selectedSlotsArray.forEach(slot => {
             const newBooking = {
