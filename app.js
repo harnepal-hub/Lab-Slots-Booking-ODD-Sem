@@ -348,7 +348,6 @@ window.renderCalendarGrid = function() {
                 
                 const shortTime = b.slot.split(" ")[0];
                 const secTag = b.section ? `-${b.section}` : '';
-                // REMOVED 田 ICON HERE
                 badge.innerHTML = `<span>${shortTime}</span> <span class="font-bold">${b.lab}</span> <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">S${b.semester}${secTag}</span>`;
                 badge.title = `${b.lab} | ${b.course} | ${b.userName} (${b.role})`;
                 eventsContainer.appendChild(badge);
@@ -430,7 +429,6 @@ function renderConsolidatedSlotCell(bookings) {
 
     return bookings.map(b => {
         const secText = b.section ? ` Sec ${b.section}` : '';
-        // REMOVED 田 ICON HERE
         return `<div class="mb-1 p-1 bg-emerald-50 border border-emerald-200 rounded text-[10px]">
             <div class="font-bold text-gitam-teal truncate">${b.lab}</div>
             <div class="text-[9px] text-slate-600 truncate">${b.course.split(':')[0]} (Sem ${b.semester}${secText})</div>
@@ -438,6 +436,7 @@ function renderConsolidatedSlotCell(bookings) {
     }).join("");
 }
 
+// 1. STANDARD CSV EXPORT
 window.exportToCSV = function() {
     if (liveBookingsCache.length === 0) {
         alert("No booking data available to export.");
@@ -462,18 +461,113 @@ window.exportToCSV = function() {
         csvRows.push(row);
     });
 
-    const csvString = csvRows.join("\n");
+    triggerBlobDownload(csvRows.join("\n"), `GITAM_Lab_Timetable_Export_${new Date().toISOString().slice(0,10)}.csv`);
+};
+
+// 2. NEW: GROUPED & CLUBBED CSV EXPORT (Date-Wise, Continuous Time Merged)
+window.exportGroupedCSV = function() {
+    if (liveBookingsCache.length === 0) {
+        alert("No booking data available to export.");
+        return;
+    }
+
+    // Sort by Date -> Lab -> Semester -> Section -> Time Slot
+    const copy = [...liveBookingsCache].sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        if (a.lab !== b.lab) return a.lab.localeCompare(b.lab);
+        if (a.semester !== b.semester) return a.semester.localeCompare(b.semester);
+        if ((a.section || '') !== (b.section || '')) return (a.section || '').localeCompare(b.section || '');
+        return a.slot.localeCompare(b.slot);
+    });
+
+    const timeToMin = (timeStr) => {
+        // e.g. "08:00 AM" -> minutes
+        const [time, period] = timeStr.split(" ");
+        let [h, m] = time.split(":").map(Number);
+        if (period === "PM" && h < 12) h += 12;
+        if (period === "AM" && h === 12) h = 0;
+        return h * 60 + m;
+    };
+
+    const minToTimeStr = (totalMins) => {
+        let h = Math.floor(totalMins / 60);
+        let m = totalMins % 60;
+        const period = h >= 12 ? "PM" : "AM";
+        if (h > 12) h -= 12;
+        if (h === 0) h = 12;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+    };
+
+    const clubbedRecords = [];
+
+    copy.forEach(booking => {
+        if (!booking.slot || !booking.slot.includes("-")) {
+            clubbedRecords.push(booking);
+            return;
+        }
+
+        const [startStr, endStr] = booking.slot.split(" - ").map(s => s.trim());
+        const startMin = timeToMin(startStr);
+        const endMin = timeToMin(endStr);
+
+        // Try to merge with the last entry in clubbedRecords if matching same session & contiguous time
+        if (clubbedRecords.length > 0) {
+            const last = clubbedRecords[clubbedRecords.length - 1];
+            const isSameDate = last.date === booking.date;
+            const isSameLab = last.lab === booking.lab;
+            const isSameSem = last.semester === booking.semester;
+            const isSameSec = (last.section || '') === (booking.section || '');
+            const isSameCourse = last.course === booking.course;
+            const isContiguous = last._endMin === startMin;
+
+            if (isSameDate && isSameLab && isSameSem && isSameSec && isSameCourse && isContiguous) {
+                last._endMin = endMin;
+                last.slot = `${minToTimeStr(last._startMin)} - ${minToTimeStr(endMin)}`;
+                return;
+            }
+        }
+
+        clubbedRecords.push({
+            ...booking,
+            _startMin: startMin,
+            _endMin: endMin,
+            slot: `${minToTimeStr(startMin)} - ${minToTimeStr(endMin)}`
+        });
+    });
+
+    let csvRows = [];
+    csvRows.push(["Date", "Lab Facility", "Duration / Slot", "Semester", "Section", "Course Code & Name", "User Name", "Role", "ID Number"].join(","));
+
+    clubbedRecords.forEach(b => {
+        const row = [
+            `"${b.date || ''}"`,
+            `"${b.lab || ''}"`,
+            `"${b.slot || ''}"`,
+            `"${b.semester || ''}"`,
+            `"${b.section || 'N/A'}"`,
+            `"${(b.course || '').replace(/"/g, '""')}"`,
+            `"${(b.userName || '').replace(/"/g, '""')}"`,
+            `"${b.role || ''}"`,
+            `"${b.userId || ''}"`
+        ].join(",");
+        csvRows.push(row);
+    });
+
+    triggerBlobDownload(csvRows.join("\n"), `GITAM_Lab_Timetable_Clubbed_${new Date().toISOString().slice(0,10)}.csv`);
+};
+
+function triggerBlobDownload(csvString, fileName) {
     const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `GITAM_Lab_Timetable_Export_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-};
+}
 
 // Auto Initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -499,7 +593,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("calendarGridMonth").addEventListener("change", window.renderCalendarGrid);
     document.getElementById("calendarGridLab").addEventListener("change", window.renderCalendarGrid);
     document.getElementById("matrixMonth").addEventListener("change", window.generateMonthlyMatrix);
+    
     document.getElementById("exportCsvBtn").addEventListener("click", window.exportToCSV);
+    document.getElementById("exportGroupedCsvBtn").addEventListener("click", window.exportGroupedCSV);
 
     document.getElementById("bookingForm").onsubmit = function(e) {
         e.preventDefault();
