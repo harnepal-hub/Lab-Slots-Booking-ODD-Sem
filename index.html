@@ -289,9 +289,14 @@
                             <label class="block text-[10px] font-bold uppercase text-slate-600">Filter Month</label>
                             <input type="month" id="matrixMonth" min="2026-07" max="2026-11" value="2026-08" class="p-1.5 text-xs border border-slate-300 rounded-md outline-none">
                         </div>
-                        <button id="exportCsvBtn" type="button" class="mt-4 md:mt-0 bg-gitam-teal hover:bg-gitam-tealDark text-white px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow">
-                            <span>📥 Export CSV / Excel</span>
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2 mt-4 md:mt-0">
+                            <button id="exportCsvBtn" type="button" class="bg-gitam-teal hover:bg-gitam-tealDark text-white px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow">
+                                <span>📥 Export Standard CSV</span>
+                            </button>
+                            <button id="exportGroupedCsvBtn" type="button" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow">
+                                <span>📥 Export Grouped / Clubbed CSV</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -324,6 +329,6 @@
         <p>&copy; 2026 GITAM (Deemed to be University) — School of Architecture. All rights reserved.</p>
     </footer>
 
-    <script src="app.js?v=999"></script>
+    <script src="app.js?v=5.0"></script>
 </body>
 </html>
