@@ -464,24 +464,14 @@ window.exportToCSV = function() {
     triggerBlobDownload(csvRows.join("\n"), `GITAM_Lab_Timetable_Export_${new Date().toISOString().slice(0,10)}.csv`);
 };
 
-// 2. NEW: GROUPED & CLUBBED CSV EXPORT (Date-Wise, Continuous Time Merged)
-window.exportGroupedCSV = function() {
+// 2. NEW: LAB-WISE MONTHLY EXPORT (Grouped by Lab -> Sorted Date-Wise -> Continuous Slots Merged)
+window.exportLabWiseCSV = function() {
     if (liveBookingsCache.length === 0) {
         alert("No booking data available to export.");
         return;
     }
 
-    // Sort by Date -> Lab -> Semester -> Section -> Time Slot
-    const copy = [...liveBookingsCache].sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-        if (a.lab !== b.lab) return a.lab.localeCompare(b.lab);
-        if (a.semester !== b.semester) return a.semester.localeCompare(b.semester);
-        if ((a.section || '') !== (b.section || '')) return (a.section || '').localeCompare(b.section || '');
-        return a.slot.localeCompare(b.slot);
-    });
-
     const timeToMin = (timeStr) => {
-        // e.g. "08:00 AM" -> minutes
         const [time, period] = timeStr.split(" ");
         let [h, m] = time.split(":").map(Number);
         if (period === "PM" && h < 12) h += 12;
@@ -498,9 +488,18 @@ window.exportGroupedCSV = function() {
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
     };
 
+    // Sort primary by Lab Facility -> Date -> Semester -> Section -> Time
+    const sorted = [...liveBookingsCache].sort((a, b) => {
+        if (a.lab !== b.lab) return a.lab.localeCompare(b.lab);
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        if (a.semester !== b.semester) return a.semester.localeCompare(b.semester);
+        if ((a.section || '') !== (b.section || '')) return (a.section || '').localeCompare(b.section || '');
+        return a.slot.localeCompare(b.slot);
+    });
+
     const clubbedRecords = [];
 
-    copy.forEach(booking => {
+    sorted.forEach(booking => {
         if (!booking.slot || !booking.slot.includes("-")) {
             clubbedRecords.push(booking);
             return;
@@ -510,17 +509,16 @@ window.exportGroupedCSV = function() {
         const startMin = timeToMin(startStr);
         const endMin = timeToMin(endStr);
 
-        // Try to merge with the last entry in clubbedRecords if matching same session & contiguous time
         if (clubbedRecords.length > 0) {
             const last = clubbedRecords[clubbedRecords.length - 1];
-            const isSameDate = last.date === booking.date;
             const isSameLab = last.lab === booking.lab;
+            const isSameDate = last.date === booking.date;
             const isSameSem = last.semester === booking.semester;
             const isSameSec = (last.section || '') === (booking.section || '');
             const isSameCourse = last.course === booking.course;
             const isContiguous = last._endMin === startMin;
 
-            if (isSameDate && isSameLab && isSameSem && isSameSec && isSameCourse && isContiguous) {
+            if (isSameLab && isSameDate && isSameSem && isSameSec && isSameCourse && isContiguous) {
                 last._endMin = endMin;
                 last.slot = `${minToTimeStr(last._startMin)} - ${minToTimeStr(endMin)}`;
                 return;
@@ -536,13 +534,15 @@ window.exportGroupedCSV = function() {
     });
 
     let csvRows = [];
-    csvRows.push(["Date", "Lab Facility", "Duration / Slot", "Semester", "Section", "Course Code & Name", "User Name", "Role", "ID Number"].join(","));
+    csvRows.push(["Lab Facility", "Date", "Duration / Slot", "Month", "Semester", "Section", "Course Code & Name", "User Name", "Role", "ID Number"].join(","));
 
     clubbedRecords.forEach(b => {
+        const monthName = b.date ? new Date(b.date).toLocaleString('default', { month: 'long', year: 'numeric' }) : '';
         const row = [
-            `"${b.date || ''}"`,
             `"${b.lab || ''}"`,
+            `"${b.date || ''}"`,
             `"${b.slot || ''}"`,
+            `"${monthName}"`,
             `"${b.semester || ''}"`,
             `"${b.section || 'N/A'}"`,
             `"${(b.course || '').replace(/"/g, '""')}"`,
@@ -553,7 +553,7 @@ window.exportGroupedCSV = function() {
         csvRows.push(row);
     });
 
-    triggerBlobDownload(csvRows.join("\n"), `GITAM_Lab_Timetable_Clubbed_${new Date().toISOString().slice(0,10)}.csv`);
+    triggerBlobDownload(csvRows.join("\n"), `GITAM_LabWise_Monthly_Timetable_${new Date().toISOString().slice(0,10)}.csv`);
 };
 
 function triggerBlobDownload(csvString, fileName) {
@@ -595,7 +595,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("matrixMonth").addEventListener("change", window.generateMonthlyMatrix);
     
     document.getElementById("exportCsvBtn").addEventListener("click", window.exportToCSV);
-    document.getElementById("exportGroupedCsvBtn").addEventListener("click", window.exportGroupedCSV);
+    document.getElementById("exportLabWiseCsvBtn").addEventListener("click", window.exportLabWiseCSV);
 
     document.getElementById("bookingForm").onsubmit = function(e) {
         e.preventDefault();
