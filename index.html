@@ -70,7 +70,7 @@
             </div>
         </div>
 
-        <!-- PAGE NAVIGATION TABS -->
+        <!-- NAVIGATION TABS -->
         <nav class="max-w-7xl mx-auto px-6 mt-2 flex flex-wrap gap-2 border-t border-emerald-800/60 pt-2">
             <button type="button" onclick="switchTab('bookingTab')" id="tab-bookingTab" class="tab-btn active text-xs font-bold px-4 py-2 rounded-t-lg transition cursor-pointer">
                 📝 Book a Slot
@@ -89,7 +89,7 @@
 
     <main class="max-w-7xl mx-auto px-4 py-8 w-full flex-grow">
         
-        <!-- PAGE 1: BOOK A SLOT -->
+        <!-- TAB 1: BOOK A SLOT -->
         <div id="bookingTab" class="tab-content grid grid-cols-1 lg:grid-cols-12 gap-8">
             <section class="lg:col-span-6 bg-gitam-card p-6 rounded-xl shadow-sm border border-gitam-border">
                 <div class="flex items-center justify-between border-b border-gitam-border pb-3 mb-5">
@@ -118,7 +118,7 @@
                         </div>
                     </div>
 
-                    <!-- Semester, Section & Lab -->
+                    <!-- Semester, Section & Lab Facility -->
                     <div class="grid grid-cols-3 gap-3">
                         <div>
                             <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Semester</label>
@@ -132,7 +132,7 @@
                             </select>
                         </div>
                         
-                        <!-- DYNAMIC SECTION CONTAINER -->
+                        <!-- DYNAMIC SECTION CONTAINER (Sem I, III, V) -->
                         <div id="sectionContainer">
                             <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Section</label>
                             <select id="sectionSelect" class="w-full p-2.5 border border-slate-300 rounded-md focus:ring-2 focus:ring-gitam-teal focus:border-gitam-teal outline-none text-sm bg-white transition">
@@ -171,7 +171,7 @@
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label class="block text-xs font-bold uppercase text-slate-700">Available 1-Hour Slots</label>
-                            <span class="text-[10px] text-gitam-teal font-semibold">(Click multiple to select continuously)</span>
+                            <span class="text-[10px] text-gitam-teal font-semibold">(Click multiple to book together)</span>
                         </div>
                         <div id="slotsContainer" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 min-h-[100px]">
                             <p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200 col-span-2 sm:col-span-4">⚠️ Please select both a <strong>Lab Facility</strong> and a <strong>Booking Date</strong> above to view slots.</p>
@@ -188,17 +188,18 @@
                 <div>
                     <h3 class="text-md font-bold text-gitam-teal uppercase mb-2">Instructions & Guidelines</h3>
                     <ul class="text-xs space-y-2 text-slate-600 list-disc pl-4">
-                        <li>Slots are divided into <strong>1-hour increments</strong> (`08-09`, `09-10`, `10-11`, `11-12`, `01-02`, `02-03`, `03-04`, `04-05`).</li>
-                        <li><strong>Multi-Slot Selection</strong>: You can click and highlight multiple 1-hour slots at once to book longer continuous sessions.</li>
+                        <li>Slots are divided into <strong>1-hour increments</strong> (08-09, 09-10, 10-11, 11-12, 01-02, 02-03, 03-04, 04-05).</li>
+                        <li><strong>Multi-Slot Selection</strong>: You can click multiple slots together to book 2, 3, or 4-hour sessions at once.</li>
                         <li><strong>12:00 PM – 01:00 PM</strong> is strictly reserved for Lunch Break and is locked.</li>
                         <li><strong>Semesters I, III, V</strong> support Section A and Section B.</li>
-                        <li>When slots are booked, they lock out across all connected devices in real time.</li>
+                        <li>All 7 Labs included: Maker Space, Computer Lab, VR Lab, Climo Lab, 3D Printer Lab, Art Court, and Building Materials Lab.</li>
+                        <li>Any booking made syncs instantly to Firebase and locks out across all devices.</li>
                     </ul>
                 </div>
             </section>
         </div>
 
-        <!-- PAGE 2: DAILY SCHEDULE -->
+        <!-- TAB 2: DAILY SCHEDULE -->
         <div id="dailyTab" class="tab-content hidden">
             <section class="bg-gitam-card p-6 rounded-xl shadow-sm border border-gitam-border">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-gitam-border pb-3">
@@ -216,7 +217,7 @@
                                 <th class="p-3 border-b">Time Slot</th>
                                 <th class="p-3 border-b">Lab</th>
                                 <th class="p-3 border-b">Course / User Details</th>
-                                <th class="p-3 border-b text-center">Status</th>
+                                <th class="p-3 border-b text-center">Action / Delete</th>
                             </tr>
                         </thead>
                         <tbody id="scheduleTableBody" class="text-xs divide-y divide-slate-100">
@@ -229,7 +230,7 @@
             </section>
         </div>
 
-        <!-- PAGE 3: GOOGLE CALENDAR MONTH GRID VIEW -->
+        <!-- TAB 3: GOOGLE CALENDAR MONTH GRID VIEW -->
         <div id="calendarGridTab" class="tab-content hidden">
             <section class="bg-gitam-card p-6 rounded-xl shadow-sm border border-gitam-border">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gitam-border pb-4 mb-4">
@@ -276,13 +277,13 @@
             </section>
         </div>
 
-        <!-- PAGE 4: MASTER TABLE MATRIX -->
+        <!-- TAB 4: MASTER TABLE MATRIX -->
         <div id="matrixTab" class="tab-content hidden">
             <section class="bg-gitam-card p-6 rounded-xl shadow-sm border border-gitam-border">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gitam-border pb-4 mb-4">
                     <div>
                         <h2 class="text-lg font-bold text-gitam-teal uppercase tracking-wide">Master Tabular Monthly Matrix</h2>
-                        <p class="text-xs text-slate-500">Standard tabular overview of lab slots across dates.</p>
+                        <p class="text-xs text-slate-500">Consolidated tabular view across each hour slot.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
                         <div>
@@ -329,6 +330,6 @@
         <p>&copy; 2026 GITAM (Deemed to be University) — School of Architecture. All rights reserved.</p>
     </footer>
 
-    <script src="app.js?v=6.0"></script>
+    <script src="app.js?v=7.0"></script>
 </body>
 </html>
