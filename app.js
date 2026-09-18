@@ -78,7 +78,7 @@ const standardSlots = [
 
 let selectedSlotsArray = [];
 
-// --- 2. FIREBASE PROJECT CONFIGURATION ---
+// --- 2. FIREBASE CONFIGURATION ---
 const firebaseConfig = {
     apiKey: "AIzaSyA4IgmrsJ3v3qzzCtHJbzggBUVkVUqOj0Q",
     authDomain: "gitam-lab-booking.firebaseapp.com",
@@ -101,28 +101,54 @@ try {
         db = firebase.database();
     }
 } catch (e) {
-    console.warn("Firebase fallback active.", e);
+    console.warn("Firebase initialization issue:", e);
 }
 
 function setupLiveListener() {
     if (db) {
         db.ref("bookings").on("value", (snapshot) => {
             liveBookingsCache = [];
-            snapshot.forEach(child => {
-                // Store Firebase key alongside data so we can delete by ID
-                liveBookingsCache.push({
-                    key: child.key,
-                    ...child.val()
+            if (snapshot.exists()) {
+                snapshot.forEach(child => {
+                    liveBookingsCache.push({
+                        key: child.key,
+                        ...child.val()
+                    });
                 });
-            });
-            window.checkSlotAvailability();
-            window.renderScheduleTable();
-            window.renderCalendarGrid();
-            window.generateMonthlyMatrix();
+                localStorage.setItem("gitam_lab_bookings", JSON.stringify(liveBookingsCache));
+            }
+            updateSyncBadge(true);
+            refreshAllViews();
+        }, (error) => {
+            console.error("Firebase Database Read Error:", error);
+            updateSyncBadge(false, error.message);
+            liveBookingsCache = JSON.parse(localStorage.getItem("gitam_lab_bookings") || "[]");
+            refreshAllViews();
         });
     } else {
         liveBookingsCache = JSON.parse(localStorage.getItem("gitam_lab_bookings") || "[]");
+        updateSyncBadge(false, "Offline Mode");
+        refreshAllViews();
     }
+}
+
+function updateSyncBadge(isOnline, msg = "") {
+    const badge = document.getElementById("syncStatus");
+    if (!badge) return;
+    if (isOnline) {
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Live Cloud Sync Active`;
+        badge.className = "inline-flex items-center gap-1.5 bg-emerald-900/80 px-2 py-0.5 rounded text-[11px] text-emerald-200 font-semibold mb-1";
+    } else {
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-400"></span> ${msg ? msg : 'Cloud Disconnected'}`;
+        badge.className = "inline-flex items-center gap-1.5 bg-red-900/80 px-2 py-0.5 rounded text-[11px] text-red-200 font-semibold mb-1";
+    }
+}
+
+function refreshAllViews() {
+    window.checkSlotAvailability();
+    window.renderScheduleTable();
+    window.renderCalendarGrid();
+    window.generateMonthlyMatrix();
 }
 
 function getCleanSemKey(semVal) {
@@ -253,7 +279,7 @@ window.checkSlotAvailability = function() {
     });
 };
 
-// DAILY SCHEDULE TABLE WITH DELETE / CANCEL ACTION
+// DAILY SCHEDULE TABLE
 window.renderScheduleTable = function() {
     const rawDate = document.getElementById("filterDate").value;
     const date = normalizeDateISO(rawDate);
@@ -269,7 +295,7 @@ window.renderScheduleTable = function() {
         return;
     }
 
-    data.sort((a, b) => a.slot.localeCompare(b.slot));
+    data.sort((a, b) => (a.slot || '').localeCompare(b.slot || ''));
 
     data.forEach(b => {
         const sectionBadge = b.section ? ` (Sec ${b.section})` : '';
@@ -312,14 +338,12 @@ window.deleteBooking = function(bookingKey) {
             liveBookingsCache = liveBookingsCache.filter(b => b.key !== bookingKey);
             localStorage.setItem("gitam_lab_bookings", JSON.stringify(liveBookingsCache));
             alert("Slot deleted locally!");
-            window.checkSlotAvailability();
-            window.renderScheduleTable();
-            window.renderCalendarGrid();
-            window.generateMonthlyMatrix();
+            refreshAllViews();
         }
     }
 };
 
+// GOOGLE CALENDAR GRID VIEW
 window.renderCalendarGrid = function() {
     const monthVal = document.getElementById("calendarGridMonth").value;
     const labVal = document.getElementById("calendarGridLab").value;
@@ -375,13 +399,13 @@ window.renderCalendarGrid = function() {
         eventsContainer.className = "space-y-1 flex-grow overflow-y-auto max-h-[90px]";
 
         if (dayBookings.length > 0) {
-            dayBookings.sort((a,b) => a.slot.localeCompare(b.slot));
+            dayBookings.sort((a,b) => (a.slot || '').localeCompare(b.slot || ''));
 
             dayBookings.forEach(b => {
                 const badge = document.createElement("div");
                 badge.className = "bg-emerald-100/80 border border-emerald-300 text-gitam-teal text-[10px] p-1 rounded font-semibold truncate flex items-center justify-between group";
                 
-                const shortTime = b.slot.split(" ")[0];
+                const shortTime = (b.slot || '').split(" ")[0];
                 const secTag = b.section ? `-${b.section}` : '';
                 badge.innerHTML = `
                     <span class="truncate"><span>${shortTime}</span> <span class="font-bold">${b.lab}</span> <span class="text-[9px] bg-gitam-teal text-white px-1 rounded">S${b.semester}${secTag}</span></span>
@@ -397,6 +421,7 @@ window.renderCalendarGrid = function() {
     }
 };
 
+// MASTER TABLE MATRIX VIEW
 window.generateMonthlyMatrix = function() {
     const selectedMonth = document.getElementById("matrixMonth").value;
     const tbody = document.getElementById("matrixTableBody");
@@ -472,7 +497,7 @@ function renderConsolidatedSlotCell(bookings) {
                 <span class="truncate">${b.lab}</span>
                 <button type="button" onclick="deleteBooking('${b.key}')" class="text-red-500 hover:text-red-700 font-bold text-[10px] ml-1" title="Delete slot">×</button>
             </div>
-            <div class="text-[9px] text-slate-600 truncate">${b.course.split(':')[0]} (Sem ${b.semester}${secText})</div>
+            <div class="text-[9px] text-slate-600 truncate">${(b.course || '').split(':')[0]} (Sem ${b.semester}${secText})</div>
         </div>`;
     }).join("");
 }
@@ -534,7 +559,7 @@ window.exportLabWiseCSV = function() {
         if (a.date !== b.date) return a.date.localeCompare(b.date);
         if (a.semester !== b.semester) return a.semester.localeCompare(b.semester);
         if ((a.section || '') !== (b.section || '')) return (a.section || '').localeCompare(b.section || '');
-        return a.slot.localeCompare(b.slot);
+        return (a.slot || '').localeCompare(b.slot || '');
     });
 
     const clubbedRecords = [];
@@ -701,10 +726,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("filterDate").value = todayISO;
 
         window.handleSemesterChange();
-        window.checkSlotAvailability();
-        window.renderScheduleTable();
-        window.renderCalendarGrid();
-        window.generateMonthlyMatrix();
+        refreshAllViews();
     }
 
     window.handleSemesterChange();
